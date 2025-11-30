@@ -18,7 +18,9 @@ public class ErpreApplication implements CommandLineRunner {
     // private JdbcTemplate jdbcTemplate; // JdbcTemplate을 자동으로 주입받기 위해 선언
 
     public static void main(String[] args) {
+
         SpringApplication.run(ErpreApplication.class, args);
+
     }
 
     @Override

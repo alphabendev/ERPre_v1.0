@@ -31,7 +31,7 @@ function Main() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const startTime = performance.now(); // 요청 시작 시간
+            const startTime = performance.now(); // Request start time
             try {
                 const [
                     orderStatusResponse,
@@ -73,19 +73,27 @@ function Main() {
                 setRecentProductCount(recentProductCount);
                 setAnnualSales(annualSalesResponse.data || 0);
                 setLast30DaysSales(last30DaysSalesResponse.data || 0);
-                setSettlementInfo(settlementResponse.data);
+
+                // Handle potential null values in settlement data
+                const settlementData = settlementResponse.data || {};
+                setSettlementInfo({
+                    approvedTotal: settlementData.approvedTotal ?? 0,
+                    deniedTotal: settlementData.deniedTotal ?? 0,
+                    settlementDeadline: settlementData.settlementDeadline || '',
+                });
+
                 setRecentCustomers(recentCustomersResponse.data);
                 setRenewalCustomers(renewalCustomersResponse.data);
                 setDeletedEmployees(deletedEmployeesResponse.data);
 
-                const endTime = performance.now(); // 요청 종료 시간
-                const duration = endTime - startTime; // 소요 시간 계산
+                const endTime = performance.now(); // Request end time
+                const duration = endTime - startTime; // Calculate duration
 
-                console.log(`요청 소요 시간: ${duration.toFixed(2)}ms`);
+                console.log(`Request duration: ${duration.toFixed(2)}ms`);
 
             } catch (error) {
-                console.error("데이터를 가져오는 중 오류 발생:", error);
-                window.showToast("데이터를 가져오는 데 실패했습니다.", 'error');
+                console.error("Error fetching data:", error);
+                window.showToast("Failed to fetch data.", 'error');
             }
         };
 
@@ -96,70 +104,65 @@ function Main() {
         <Layout currentMenu="main">
             <main className="main-content dashboard-container">
                 <div className="card card-large" onClick={() => window.location.href = '/orderList?mode=Assigned'}>
-                    <h3><i className="bi bi-bar-chart-line-fill"></i> 영업 관리</h3>
+                    <h3><i className="bi bi-bar-chart-line-fill"></i> Sales Management</h3>
                     <div className="info-group">
-                        <p><i className="bi bi-clock-fill"></i> 결재중 : {orderStatusCount.ingCount}건</p>
-                        <p><i className="bi bi-check-circle-fill"></i> 결재완료 : {orderStatusCount.approvedCount}건</p>
-                        <p><i className="bi bi-x-circle-fill"></i> 반려 : {orderStatusCount.deniedCount}건</p>
+                        <p><i className="bi bi-clock-fill"></i> Pending Approval: {orderStatusCount.ingCount}</p>
+                        <p><i className="bi bi-check-circle-fill"></i> Approved: {orderStatusCount.approvedCount}</p>
+                        <p><i className="bi bi-x-circle-fill"></i> Denied: {orderStatusCount.deniedCount}</p>
                     </div>
                 </div>
                 <div className="card card-large" onClick={() => window.location.href = '/customerList'}>
-                    <h3><i className="bi bi-building"></i> 고객 관리</h3>
+                    <h3><i className="bi bi-building"></i> Customer Management</h3>
                     <div className="info-group">
-                        <p><i className="bi bi-people-fill"></i> 총 고객사 수 : {(totalCustomers).toLocaleString()}개</p>
-                        <p><i className="bi bi-person-add"></i> 최근 신규 고객 : {(recentCustomers.length).toLocaleString()}개
-                        </p>
-                        <p><i className="bi bi-arrow-clockwise"></i> 계약 갱신
-                            예정 : {(renewalCustomers.length).toLocaleString()}개</p>
+                        <p><i className="bi bi-people-fill"></i> Total Customers: {totalCustomers.toLocaleString()}</p>
+                        <p><i className="bi bi-person-add"></i> Recent New Customers: {recentCustomers.length.toLocaleString()}</p>
+                        <p><i className="bi bi-arrow-clockwise"></i> Pending Renewals: {renewalCustomers.length.toLocaleString()}</p>
                     </div>
                 </div>
                 <div className="card card-large" onClick={() => window.location.href = '/employeeList'}>
-                    <h3><i className="bi bi-people-fill"></i> 직원 관리</h3>
+                    <h3><i className="bi bi-people-fill"></i> Employee Management</h3>
                     <div className="info-group">
-                        <p><i className="bi bi-person-circle"></i> 전체 직원 수 : {totalEmployees}명</p>
-                        <p><i className="bi bi-person-check-fill"></i> 최근 채용 인원 : {recentHiresCount}명</p>
-                        <p><i className="bi bi-person-x-fill"></i> 최근 퇴직 인원  : {deletedEmployees}명</p>
+                        <p><i className="bi bi-person-circle"></i> Total Employees: {totalEmployees}</p>
+                        <p><i className="bi bi-person-check-fill"></i> Recent Hires: {recentHiresCount}</p>
+                        <p><i className="bi bi-person-x-fill"></i> Recent Departures: {deletedEmployees}</p>
                     </div>
                 </div>
                 <div className="card card-large" onClick={() => window.location.href = '/productList'}>
-                    <h3><i className="bi bi-box-seam"></i> 상품 관리</h3>
+                    <h3><i className="bi bi-box-seam"></i> Product Management</h3>
                     <div className="info-group">
-                        <p><i className="bi bi-box"></i> 상품 전체 수량 : {totalProductCount.toLocaleString()}개</p>
-                        <p><i className="bi bi-star-fill"></i> 신상품 등록 : {recentProductCount.toLocaleString()}개</p>
-                        <p><i className="bi bi-box-seam"></i> 최근 판매량  : {totalSales.toLocaleString()}개</p>
-                        <p><i className="bi bi-list-check"></i> 월간 총 매출 : ₩{last30DaysSales.toLocaleString()}</p>
+                        <p><i className="bi bi-box"></i> Total Products: {totalProductCount.toLocaleString()}</p>
+                        <p><i className="bi bi-star-fill"></i> New Products: {recentProductCount.toLocaleString()}</p>
+                        <p><i className="bi bi-box-seam"></i> Recent Sales: {totalSales.toLocaleString()}</p>
+                        <p><i className="bi bi-list-check"></i> Monthly Revenue: ₩{last30DaysSales.toLocaleString()}</p>
                     </div>
                 </div>
                 <div className="image-container">
-                    <img src="/img/cardimg.jpg" alt="상품 이미지" className="logo-image"/>
-                    <img src="/img/cardimg2.jpg" alt="상품 이미지" className="logo-image"/>
+                    <img src="/img/cardimg.jpg" alt="Product Image" className="logo-image"/>
+                    <img src="/img/cardimg2.jpg" alt="Product Image" className="logo-image"/>
                 </div>
                 <div className="card" onClick={() => window.location.href = '/orderReport'}>
-                    <h3><i className="bi bi-graph-up-arrow"></i> 주문 현황</h3>
+                    <h3><i className="bi bi-graph-up-arrow"></i> Order Status</h3>
                     <div className="info-group">
-                        <p><i className="bi bi-list-check"></i> 총 주문 수 : {(orderCount).toLocaleString()}건</p>
-                        <p><i className="bi bi-cash-coin"></i> 연간 총 매출 : ₩{(annualSales || 0).toLocaleString()}</p>
-                        <p><i className="bi bi-check-all"></i> 연 매출 목표 달성율 : ₩{(annualSales || 0).toLocaleString()}/₩100,000,000
+                        <p><i className="bi bi-list-check"></i> Total Orders: {orderCount.toLocaleString()}</p>
+                        <p><i className="bi bi-cash-coin"></i> Annual Revenue: ₩{annualSales.toLocaleString()}</p>
+                        <p><i className="bi bi-check-all"></i> Annual Target Achievement: ₩{annualSales.toLocaleString()}/₩100,000,000
                             ({((annualSales / 100000000) * 100).toFixed(2)}%)</p>
                     </div>
                 </div>
                 <div className="card">
-                    <h3><i className="bi bi-cash-coin"></i> 정산</h3>
+                    <h3><i className="bi bi-cash-coin"></i> Settlements</h3>
                     <div className="info-group">
-                        <p><i className="bi bi-cash-stack"></i> 정산금액 :
-                            ₩{(settlementInfo.approvedTotal || 0).toLocaleString()}</p>
-                        <p><i className="bi bi-calendar-date"></i> 정산
-                            마감일 : {settlementInfo.settlementDeadline || '정보 없음'}</p>
-                        <p><i className="bi bi-credit-card"></i> 미수금 :
-                            ₩{(settlementInfo.deniedTotal || 0).toLocaleString()}</p>
+                        <p><i className="bi bi-cash-stack"></i> Settlement Amount: ₩{(settlementInfo.approvedTotal ?? 0).toLocaleString()}</p>
+                        <p><i className="bi bi-calendar-date"></i> Settlement Deadline: {settlementInfo.settlementDeadline || 'N/A'}</p>
+                        <p><i className="bi bi-credit-card"></i> Outstanding Amount: ₩{(settlementInfo.deniedTotal ?? 0).toLocaleString()}</p>
                     </div>
                 </div>
                 <div className="card">
-                    <h3><i className="bi bi-megaphone-fill"></i> 공지사항</h3>
+                    <h3><i className="bi bi-megaphone-fill"></i> Announcements</h3>
                     <div className="info-group">
-                        <p><i className="bi bi-bell-fill"></i> 새로운 이벤트 : 쉐어드원 자사 방문일</p>
-                        <p><i className="bi bi-info-circle-fill"></i> 공지사항 업데이트 : 2024년 9월 26일</p>
-                        <p><i className="bi bi-calendar-event"></i> 다음 회의 일정 : 2024년 9월 27일</p>
+                        <p><i className="bi bi-bell-fill"></i> New Event: SharedOne Company Visit</p>
+                        <p><i className="bi bi-info-circle-fill"></i> Announcement Updated: September 26, 2024</p>
+                        <p><i className="bi bi-calendar-event"></i> Next Meeting: September 27, 2024</p>
                     </div>
                 </div>
             </main>

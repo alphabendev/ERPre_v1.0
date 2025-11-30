@@ -1,1283 +1,776 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import '../../../resources/static/css/common/Main.css'; // 공통 CSS 파일
+import '../../../resources/static/css/common/Main.css';
 import Layout from "../../layout/Layout";
 import { BrowserRouter } from "react-router-dom";
-import '../../../resources/static/css/customer/CustomerList.css';
+import '../../../resources/static/css/hr/EmployeeList.css';
 import axios from 'axios';
+import { formatDate } from '../../util/dateUtils'
+import { add, format } from 'date-fns';
+import { useDebounce } from '../common/useDebounce';
 
-// 날짜 포맷팅 함수
-const formatDateTime = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = (`0${date.getMonth() + 1}`).slice(-2);
-    const day = (`0${date.getDate()}`).slice(-2);
-    const hours = (`0${date.getHours()}`).slice(-2);
-    const minutes = (`0${date.getMinutes()}`).slice(-2);
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
-};
+function EmployeeList() {
+    const [loading, setLoading] = useState(false); // 🔴 Add loading state
+    const [employees, setEmployees] = useState([]);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(0);
+    const [selectAll, setSelectAll] = useState(false);
+    const [selectedEmployees, setSelectedEmployees] = useState([]);
+    const [currentView, setCurrentView] = useState('employeesN');
 
-// 고객 등록 모달창
-function CustomerRegisterModal({ show, onClose, onSave, customerData }) {
-    const [form, setForm] = useState({
-        customerName: '',                    // 고객사 이름
-        customerTel: '',                     // 고객사 연락처
-        customerRepresentativeName: '',      // 대표자명
-        customerBusinessRegNo: '',           // 사업자 등록번호
-        customerAddr: '',                    // 사업장 주소
-        customerFaxNo: '',                   // 팩스번호
-        customerManagerName: '',             // 담당자명
-        customerManagerEmail: '',            // 담당자 이메일
-        customerManagerTel: '',              // 담당자 연락처
-        customerCountryCode: '',             // 국가코드
-        customerType: '',                    // 거래처분류
-        customerEtaxInvoiceYn: '',           // 전자세금계산서 여부
-        customerTransactionStartDate: '',    // 거래 시작일
-        customerTransactionEndDate: ''       // 거래 종료일
-    });
+    // Array of searched employees
+    const [filteredEmployees, setFilteredEmployees] = useState([]);
+    // const debouncedFilteredEmployees = useDebounce(filteredEmployees,1000);
+    // Search
+    const [searchEmployee, setSearchEmployee] = useState('');
+    const debouncedSearchEmployee = useDebounce(searchEmployee, 300);
 
-    //모달 알림창 2번 뜨는거 방지
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    // Modal related (hidden by default)
+    const [showModifyModal, setShowModifyModal] = useState(false);
+    const [showInsertModal, setShowInsertModal] = useState(false);
 
-    // 에러 메시지 상태
-    const [errors, setErrors] = useState({
-        customerName: '',
-        customerBusinessRegNo: '',
-        customerTel: '',
-        customerManagerTel: '',
-        customerManagerEmail: ''
-    });
-
-    //모달이 열릴 때마다 폼 초기화
+    // 🟡 Initial screen shows only active employees
     useEffect(() => {
-        if (show) {
-            if (customerData) {
-                setForm(customerData); // 기존 고객 데이터를 폼에 반영
-            } else {
-                // 새 고객 등록 시 폼 초기화
-                setForm({
-                    customerName: '',
-                    customerTel: '',
-                    customerRepresentativeName: '',
-                    customerBusinessRegNo: '',
-                    customerAddr: '',
-                    customerFaxNo: '',
-                    customerManagerName: '',
-                    customerManagerEmail: '',
-                    customerManagerTel: '',
-                    customerCountryCode: '',
-                    customerType: '',
-                    customerEtaxInvoiceYn: '',
-                    customerTransactionStartDate: '',
-                    customerTransactionEndDate: ''
-                });
-            }
-            // 에러 메시지 초기화
-            setErrors({
-                customerName: '',
-                customerBusinessRegNo: '',
-                customerTel: '',
-                customerManagerTel: '',
-                customerManagerEmail: ''
-            });
+        pageEmployeesN(1);
+    }, []);
+
+    // 🟡 Display only searched employees on screen
+    useEffect(() => {
+        if (debouncedSearchEmployee === '') {
+            setFilteredEmployees(employees);
+        } else {
+            const filtered = employees.filter(employee => employee.employeeName.includes(debouncedSearchEmployee));
+            setFilteredEmployees(filtered);
         }
-    }, [show, customerData]);
+    }, [debouncedSearchEmployee, employees])
 
-    // 입력 값 변경 시 폼 상태 업데이트
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setForm({ ...form, [name]: value });
-    };
-
-    // 폼 제출 처리
-    const handleSubmit = (e) => {
-        e.preventDefault();
-
-        //1. 필수 필드 값 검증
-        let valid = true;
-        let newErrors = {
-            customerName: '',
-            customerBusinessRegNo: '',
-            customerTel: '',
-            customerManagerTel: '',
-            customerManagerEmail: '',
-        };
-
-        if (!form.customerName.trim()) {
-            newErrors.customerName = '고객사 이름은 필수 입력 항목입니다.';
-            valid = false;
-        }
-        if (!form.customerBusinessRegNo.trim()) {
-            newErrors.customerBusinessRegNo = '사업자 등록번호는 필수 입력 항목입니다.';
-            valid = false;
-        }
-        // 에러 상태 업데이트
-        setErrors(newErrors);
-
-        // 필수 필드 검증 실패 시 저장 중단
-        if (!valid) {
-            return;
-        }
-
-        //2. 중복 체크
-        axios
-            .post('/api/customer/checkDuplicate', {
-                customerName: form.customerName,
-                customerBusinessRegNo: form.customerBusinessRegNo,
-            })
-            .then((response) => {
-                if (response.data.isDuplicateName) {
-                    window.showToast('이미 존재하는 고객명입니다.', 'error');
-                    return;
-                }
-                if (response.data.isDuplicateBusinessRegNo) {
-                    window.showToast('이미 존재하는 사업자 등록번호입니다.', 'error');
-                    return;
-                }
-
-                //3. 유효성 검증
-                valid = true;
-                newErrors = {
-                    customerName: '',
-                    customerBusinessRegNo: '',
-                    customerTel: '',
-                    customerManagerTel: '',
-                    customerManagerEmail: ''
-                };
-
-                const customerBusinessRegNoRegex = /^\d{3}-\d{2}-\d{5}$/;
-                const customerTelRegex = /^\d{2,3}-\d{3,4}-\d{4}$/;
-                const customerManagerTelRegex = /^01[0-9]-\d{3,4}-\d{4}$/;
-                const customerManagerEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-                if (!customerBusinessRegNoRegex.test(form.customerBusinessRegNo)) {
-                    newErrors.customerBusinessRegNo =
-                        '사업자 등록번호 형식이 올바르지 않습니다.\n예: 123-45-67890';
-                    valid = false;
-                }
-                if (form.customerTel && !customerTelRegex.test(form.customerTel)) {
-                    newErrors.customerTel =
-                        '고객사 연락처 형식이 올바르지 않습니다.\n예: 02-456-7890';
-                    valid = false;
-                }
-                if (form.customerManagerTel && !customerManagerTelRegex.test(form.customerManagerTel)) {
-                    newErrors.customerManagerTel =
-                        '담당자 연락처 형식이 올바르지 않습니다.\n예: 010-1234-5678';
-                    valid = false;
-                }
-                if (form.customerManagerEmail && !customerManagerEmailRegex.test(form.customerManagerEmail)) {
-                    newErrors.customerManagerEmail =
-                        '담당자 이메일 형식이 올바르지 않습니다.\n예: abc@example.com';
-                    valid = false;
-                }
-
-                // 에러 상태 업데이트
-                setErrors(newErrors);
-
-                // 유효성 검사 실패 시 저장 중단
-                if (!valid) {
-                    return;
-                }
-
-                // 모든 검증을 통과하면 저장 동작 수행
-                onSave(form); // 상위 컴포넌트로 저장된 데이터 전달
-                onClose(); // 모달 닫기
-            })
-            .catch((error) => {
-                console.error('중복 체크 중 오류 발생:', error);
-            });
-    };
-
-    if (!show) return null; // 모달 표시 여부 체크
-
-    return (
-        <div className="modal_overlay">
-            <div className="modal_container customer">
-                <div className="header">
-                    <div>{customerData ? '고객 정보 수정' : '고객 등록'}</div>
-                    <button className="btn_close" onClick={onClose}><i className="bi bi-x-lg"></i></button> {/* 모달 닫기 버튼 */}
-                </div>
-                <div className="register-form">
-                    <div className="left-column">
-                        <div className="form-group">
-                            <label>고객사 이름<span className='span_red'>*</span></label>
-                            <input
-                                type="text"
-                                name="customerName"
-                                value={form.customerName || ''}
-                                onChange={handleInputChange} />
-                            {errors.customerName && (
-                                <p className="field_error_msg"><i className="bi bi-exclamation-circle-fill"></i>{errors.customerName}</p>)}
-                        </div>
-                        <div className="form-group">
-                            <label>사업자 등록번호<span className='span_red'>*</span></label>
-                            <input
-                                type="text"
-                                name="customerBusinessRegNo"
-                                value={form.customerBusinessRegNo || ''}
-                                onChange={handleInputChange}
-                                className={errors.customerBusinessRegNo ? 'invalid' : ''} />
-                            {errors.customerBusinessRegNo && (
-                                <p className="field_error_msg">
-                                    <i className="bi bi-exclamation-circle-fill"></i>{' '}
-                                    <span dangerouslySetInnerHTML={{ __html: errors.customerBusinessRegNo.replace(/\n/g, '<br />') }} />
-                                </p>
-
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label>대표자명</label>
-                            <input
-                                type="text"
-                                name="customerRepresentativeName"
-                                value={form.customerRepresentativeName || ''}
-                                onChange={handleInputChange} />
-                        </div>
-                        <div className="form-group">
-                            <label>사업장 주소</label>
-                            <input
-                                type="text"
-                                name="customerAddr"
-                                value={form.customerAddr || ''}
-                                onChange={handleInputChange} />
-                        </div>
-                        <div className="form-group">
-                            <label>고객사 연락처</label>
-                            <input
-                                type="text"
-                                name="customerTel"
-                                value={form.customerTel || ''}
-                                onChange={handleInputChange}
-                                className={errors.customerTel ? 'invalid' : ''} />
-                            {errors.customerTel && (
-                                <p
-                                    className="field_error_msg"
-                                    dangerouslySetInnerHTML={{
-                                        __html: errors.customerTel.replace(/\n/g, '<br />'),
-                                    }}
-                                />
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label>팩스번호</label>
-                            <input
-                                type="text"
-                                name="customerFaxNo"
-                                value={form.customerFaxNo || ''}
-                                onChange={handleInputChange} />
-                        </div>
-                        <div className="form-group">
-                            <label>거래처분류</label>
-                            <select
-                                name="customerType"
-                                value={form.customerType || ''}
-                                onChange={handleInputChange}>
-                                <option value="">선택</option>
-                                <option value="01">01. 고객기업</option>
-                                <option value="02">02. 협력기업</option>
-                                <option value="03">03. 본사기업</option>
-                                <option value="04">04. 기타기업</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div className="right-column">
-                        <div className="form-group">
-                            <label>담당자명</label>
-                            <input
-                                type="text"
-                                name="customerManagerName"
-                                value={form.customerManagerName || ''}
-                                onChange={handleInputChange} />
-                        </div>
-                        <div className="form-group">
-                            <label>담당자 연락처</label>
-                            <input
-                                type="text"
-                                name="customerManagerTel"
-                                value={form.customerManagerTel || ''}
-                                onChange={handleInputChange}
-                                className={errors.customerManagerTel ? 'invalid' : ''} />
-                            {errors.customerManagerTel && (
-                                <p
-                                    className="field_error_msg"
-                                    dangerouslySetInnerHTML={{
-                                        __html: errors.customerManagerTel.replace(/\n/g, '<br />'),
-                                    }}
-                                />
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label>담당자 이메일</label>
-                            <input
-                                type="email"
-                                name="customerManagerEmail"
-                                value={form.customerManagerEmail || ''}
-                                onChange={handleInputChange}
-                                className={errors.customerManagerEmail ? 'invalid' : ''} />
-                            {errors.customerManagerEmail && (
-                                <p
-                                    className="field_error_msg"
-                                    dangerouslySetInnerHTML={{
-                                        __html: errors.customerManagerEmail.replace(/\n/g, '<br />'),
-                                    }}
-                                />
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label>국가코드</label>
-                            <select
-                                name="customerCountryCode"
-                                value={form.customerCountryCode || ''}
-                                onChange={handleInputChange}>
-                                <option value="">선택</option>
-                                <option value="KR">한국 (KR)</option>
-                                <option value="US">미국 (US)</option>
-                                <option value="JP">일본 (JP)</option>
-                                <option value="CN">중국 (CN)</option>
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label>전자세금계산서 여부</label>
-                            <select
-                                name="customerEtaxInvoiceYn"
-                                value={form.customerEtaxInvoiceYn || ''}
-                                onChange={handleInputChange}>
-                                <option value="">선택</option>
-                                <option value="Y">Y</option>
-                                <option value="N">N</option>
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label>거래 시작일</label>
-                            <input
-                                type="date"
-                                name="customerTransactionStartDate"
-                                value={form.customerTransactionStartDate || ''}
-                                onChange={handleInputChange} />
-                        </div>
-                        <div className="form-group">
-                            <label>거래 종료일</label>
-                            <input
-                                type="date"
-                                name="customerTransactionEndDate"
-                                value={form.customerTransactionEndDate || ''}
-                                onChange={handleInputChange} />
-                        </div>
-                    </div>
-                </div>
-                <div className="modal-actions">
-                    <button type="submit" className="box blue" onClick={handleSubmit}>등록</button>
-                </div>
-
-                {/* 저장 확인 모달 */}
-                {showConfirmModal && (
-                    <ConfirmationModal
-                        message="등록하시겠습니까?"
-                        onConfirm={handleConfirmSave}
-                        onCancel={() => setShowConfirmModal(false)}
-                    />
-                )}
-            </div>
-        </div>
-    );
-};
-
-// 고객 상세 정보 모달창
-function CustomerDetailModal({ show, onClose, customer, onSave, onDelete }) {
-
-    const [isEditMode, setIsEditMode] = useState(false); // 편집 모드 여부
-    const [editableCustomer, setEditableCustomer] = useState(customer || {}); // 편집 가능한 고객 데이터
-    const [showEditConfirmModal, setShowEditConfirmModal] = useState(false); // 수정 확인 모달 표시 여부
-    const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false); // 저장 확인 모달 표시 여부
-    const [errors, setErrors] = useState({ // 에러 메시지
-        customerName: '',
-        customerBusinessRegNo: '',
-        customerTel: '',
-        customerManagerTel: '',
-        customerManagerEmail: ''
+    // Registration functionality
+    const [newEmployee, setNewEmployee] = useState({
+        employeeId: '',
+        employeePw: '',
+        employeeName: '',
+        employeeEmail: '',
+        employeeTel: '',
+        employeeRole: ''
     });
 
-    // 모달이 열릴 때마다 편집 모드 초기화 및 고객 데이터 설정
-    useEffect(() => {
-        if (show) {
-            setIsEditMode(false); // 편집 모드 초기화
-            setEditableCustomer(customer || {}); // 기존 고객 데이터 설정
-            setErrors({
-                customerName: '',
-                customerBusinessRegNo: '',
-                customerTel: '',
-                customerManagerTel: '',
-                customerManagerEmail: ''
-            }); // 에러 메시지 초기화
-        }
-    }, [show, customer]);
+    //    const handleRegiClick = () => {
+    //        window.location.href = "/employeeRegister";
+    //    }; Page navigation, no longer used
 
-    // 편집 모드 토글 함수
-    const toggleEditMode = () => {
-        if (isEditMode) return; // 편집 모드일 경우 동작하지 않음
-        setShowEditConfirmModal(true); // 수정 확인 모달 표시
-    };
+    //    const showTwentyEmployees = () => {
+    //        pageEmployees(page);
+    //
+    //    }; Query button must be pressed to query, no longer used
 
-    // 수정 확인 모달에서 확인을 누르면 편집 모드 활성화
-    const handleConfirmEdit = () => {
-        setIsEditMode(true); // 편집 모드 활성화
-        setShowEditConfirmModal(false); // 수정 확인 모달 닫기
-    };
-
-    // 입력 값 변경 시 상태 업데이트 함수
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setEditableCustomer((prev) => ({ ...prev, [name]: value }));
-    };
-
-    // 저장 처리 함수 : 저장 확인 모달 표시
-    const handleSave = () => {
-        setShowSaveConfirmModal(true); //저장 확인 모달 표시
-    };
-
-    // 저장 확인 모달에서 확인을 누르면 실제 저장 동작 수행
-    const handleConfirmSave = () => {
-
-        // 필수 필드 값 검증
-        let valid = true;
-        let newErrors = {
-            customerName: '',
-            customerBusinessRegNo: '',
-            customerTel: '',
-            customerManagerTel: '',
-            customerManagerEmail: ''
-        };
-
-        if (!editableCustomer.customerName.trim()) {
-            newErrors.customerName = '고객사 이름은 필수 입력 항목입니다.';
-            valid = false;
-        }
-        if (!editableCustomer.customerBusinessRegNo.trim()) {
-            newErrors.customerBusinessRegNo = '사업자 등록번호는 필수 입력 항목입니다.';
-            valid = false;
-        }
-
-        // 에러 상태 업데이트
-        setErrors(newErrors);
-
-        // 필수 필드 검증 실패 시 저장 중단
-        if (!valid) {
-            setShowSaveConfirmModal(false); // 저장 확인 모달 닫기
-            return;
-        }
-
-        // 유효성 검증
-        const customerBusinessRegNoRegex = /^\d{3}-\d{2}-\d{5}$/;
-        const customerTelRegex = /^\d{2,3}-\d{3,4}-\d{4}$/;
-        const customerManagerTelRegex = /^01[0-9]-\d{3,4}-\d{4}$/;
-        const customerManagerEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        valid = true;
-        newErrors = {
-            customerName: '',
-            customerBusinessRegNo: '',
-            customerTel: '',
-            customerManagerTel: '',
-            customerManagerEmail: ''
-        };
-
-        if (!customerBusinessRegNoRegex.test(editableCustomer.customerBusinessRegNo)) {
-            newErrors.customerBusinessRegNo = '사업자 등록번호 형식이 올바르지 않습니다.\n예: 123-45-67890';
-            valid = false;
-        }
-        if (editableCustomer.customerTel && !customerTelRegex.test(editableCustomer.customerTel)) {
-            newErrors.customerTel = '고객사 연락처 형식이 올바르지 않습니다.\n예: 02-456-7890';
-            valid = false;
-        }
-        if (editableCustomer.customerManagerTel && !customerManagerTelRegex.test(editableCustomer.customerManagerTel)) {
-            newErrors.customerManagerTel = '담당자 연락처 형식이 올바르지 않습니다.\n예: 010-1234-5678';
-            valid = false;
-        }
-        if (editableCustomer.customerManagerEmail && !customerManagerEmailRegex.test(editableCustomer.customerManagerEmail)) {
-            newErrors.customerManagerEmail = '담당자 이메일 형식이 올바르지 않습니다.\n예: abc@example.com';
-            valid = false;
-        }
-
-        // 에러 상태 업데이트
-        setErrors(newErrors);
-
-        // 유효성 검증 실패 시 저장 중단
-        if (!valid) {
-            setShowSaveConfirmModal(false); // 저장 확인 모달 닫기
-            return;
-        }
-
-        // 모든 검증을 통과하면 저장 동작 수행
-        onSave(editableCustomer); // 상위 컴포넌트로 저장된 데이터 전달
-        onClose(); // 상세 모달 닫기
-        setShowSaveConfirmModal(false); // 저장 확인 모달 닫기
-    };
-
-    if (!show || !customer) return null; // 모달 표시 여부 체크
-
-    return (
-        <div className="modal_overlay">
-            <div className="modal_container customer">
-                <div className="header">
-                    <div>{isEditMode ? '고객 정보 수정' : '고객 상세 정보'}</div>
-                    <button className="btn_close" onClick={onClose}><i className="bi bi-x-lg"></i></button> {/* 모달 닫기 버튼 */}
-                </div>
-                <div className="detail-form">
-                    <div className="left-column">
-                        <div className="form-group">
-                            <label>고객사 이름{isEditMode && (<span className='span_red'>*</span>)}</label>
-                            <input
-                                type="text"
-                                name="customerName"
-                                value={editableCustomer.customerName || ''}
-                                onChange={handleChange}
-                                readOnly={!isEditMode}
-                                className={errors.customerName ? 'invalid' : ''} />
-                            {errors.customerName && (
-                                <p className="field_error_msg"><i className="bi bi-exclamation-circle-fill"></i>{errors.customerName}</p>)}
-                        </div>
-                        <div className="form-group">
-                            <label>사업자 등록번호{isEditMode && (<span className='span_red'>*</span>)}</label>
-                            <input
-                                type="text"
-                                name="customerBusinessRegNo"
-                                value={editableCustomer.customerBusinessRegNo || ''}
-                                onChange={handleChange}
-                                readOnly={!isEditMode}
-                                className={errors.customerBusinessRegNo ? 'invalid' : ''} />
-                            {errors.customerBusinessRegNo && (
-                                <p className="field_error_msg">
-                                    <i className="bi bi-exclamation-circle-fill"></i>{' '}
-                                    <span dangerouslySetInnerHTML={{ __html: errors.customerBusinessRegNo.replace(/\n/g, '<br />') }} />
-                                </p>
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label>대표자명</label>
-                            <input
-                                type="text"
-                                name="customerRepresentativeName"
-                                value={editableCustomer.customerRepresentativeName || ''}
-                                onChange={handleChange}
-                                readOnly={!isEditMode}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>사업장 주소</label>
-                            <input
-                                type="text"
-                                name="customerAddr"
-                                value={editableCustomer.customerAddr || ''}
-                                onChange={handleChange}
-                                readOnly={!isEditMode}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>고객사 연락처</label>
-                            <input
-                                type="text"
-                                name="customerTel"
-                                value={editableCustomer.customerTel || ''}
-                                onChange={handleChange}
-                                readOnly={!isEditMode}
-                                className={errors.customerTel ? 'invalid' : ''} />
-                            {errors.customerTel && (
-                                <p
-                                    className="field_error_msg"
-                                    dangerouslySetInnerHTML={{
-                                        __html: errors.customerTel.replace(/\n/g, '<br />'),
-                                    }}
-                                />
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label>팩스 번호</label>
-                            <input
-                                type="text"
-                                name="customerFaxNo"
-                                value={editableCustomer.customerFaxNo || ''}
-                                onChange={handleChange}
-                                readOnly={!isEditMode}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>거래처분류</label>
-                            <select name="customerType" value={editableCustomer.customerType || ''} onChange={handleChange}
-                                disabled={!isEditMode}>
-                                <option value="">선택</option>
-                                <option value="01">01. 고객기업</option>
-                                <option value="02">02. 협력기업</option>
-                                <option value="03">03. 본사기업</option>
-                                <option value="04">04. 기타기업</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div className="right-column">
-                        <div className="form-group">
-                            <label>담당자명</label>
-                            <input
-                                type="text"
-                                name="customerManagerName"
-                                value={editableCustomer.customerManagerName || ''}
-                                onChange={handleChange}
-                                readOnly={!isEditMode}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>담당자 연락처</label>
-                            <input
-                                type="text"
-                                name="customerManagerTel"
-                                value={editableCustomer.customerManagerTel || ''}
-                                onChange={handleChange}
-                                readOnly={!isEditMode}
-                                className={errors.customerManagerTel ? 'invalid' : ''} />
-                            {errors.customerManagerTel && (
-                                <p
-                                    className="field_error_msg"
-                                    dangerouslySetInnerHTML={{
-                                        __html: errors.customerManagerTel.replace(/\n/g, '<br />'),
-                                    }}
-                                />
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label>담당자 이메일</label>
-                            <input
-                                type="email"
-                                name="customerManagerEmail"
-                                value={editableCustomer.customerManagerEmail || ''}
-                                onChange={handleChange}
-                                readOnly={!isEditMode}
-                                className={errors.customerManagerEmail ? 'invalid' : ''} />
-                            {errors.customerManagerEmail && (
-                                <p
-                                    className="field_error_msg"
-                                    dangerouslySetInnerHTML={{
-                                        __html: errors.customerManagerEmail.replace(/\n/g, '<br />'),
-                                    }}
-                                />
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label>국가 코드</label>
-                            <select name="customerCountryCode" value={editableCustomer.customerCountryCode || ''}
-                                onChange={handleChange} disabled={!isEditMode}>
-                                <option value="">선택</option>
-                                <option value="KR">한국 (+82)</option>
-                                <option value="US">미국 (+1)</option>
-                                <option value="JP">일본 (+81)</option>
-                                <option value="CN">중국 (+86)</option>
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label>전자세금계산서 여부</label>
-                            <select name="customerEtaxInvoiceYn" value={editableCustomer.customerEtaxInvoiceYn || ''}
-                                onChange={handleChange}
-                                disabled={!isEditMode}>
-                                <option value="">선택</option>
-                                <option value="Y">Y</option>
-                                <option value="N">N</option>
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label>거래 시작일</label>
-                            <input type="date" name="customerTransactionStartDate"
-                                value={editableCustomer.customerTransactionStartDate ? editableCustomer.customerTransactionStartDate.substring(0, 10) : ''} onChange={handleChange}
-                                readOnly={!isEditMode} />
-                        </div>
-                        <div className="form-group">
-                            <label>거래 종료일</label>
-                            <input type="date" name="customerTransactionEndDate"
-                                value={editableCustomer.customerTransactionEndDate ? editableCustomer.customerTransactionEndDate.substring(0, 10) : ''} onChange={handleChange}
-                                readOnly={!isEditMode} />
-                        </div>
-                    </div>
-                </div>
-                <div className="modal-actions">
-                    {isEditMode ? (
-                        <button className="box blue" type="button" onClick={handleSave}>저장</button>
-                    ) : (
-                        <>
-                            {/* 삭제된 상태에 따라 조건부 렌더링 */}
-                            {editableCustomer.customerDeleteYn !== 'Y' ? (
-                                <>
-                                    <button className="box blue" type="button" onClick={toggleEditMode}>수정</button>
-                                    <button className="box red" type="button" onClick={onDelete}>삭제</button>
-                                </>
-                            ) : (<></>)}
-                        </>
-                    )}
-                </div>
-
-                {/* 수정 확인 모달 */}
-                {showEditConfirmModal && (
-                    <ConfirmationModal
-                        message="수정하시겠습니까?"
-                        onConfirm={handleConfirmEdit}
-                        onCancel={() => setShowEditConfirmModal(false)}
-                    />
-                )}
-
-                {/* 저장 확인 모달 */}
-                {showSaveConfirmModal && (
-                    <ConfirmationModal
-                        message="저장하시겠습니까?"
-                        onConfirm={handleConfirmSave}
-                        onCancel={() => setShowSaveConfirmModal(false)}
-                    />
-                )}
-            </div>
-        </div>
-    );
-};
-
-// 모달창 확인 컴포넌트
-function ConfirmationModal({ message, onConfirm, onCancel }) {
-    return (
-        <div className="modal_overlay">
-            <div className="modal_confirm">
-                {/* 아이콘을 포함한 메시지 출력 영역 */}
-                <div className="icon_wrap"><i className="bi bi-exclamation-circle"></i></div>
-                <p className='msg'>{message}</p>
-                {/* 확인 및 취소 버튼 */}
-                <div className="modal-actions">
-                    <button className="box red" onClick={onConfirm}>확인</button>
-                    <button className="box gray" onClick={onCancel}>취소</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// 고객 리스트
-function CustomerList() {
-
-    const [loading, setLoading] = useState(false); // 🔴 로딩 상태 추가
-    const [filter, setFilter] = useState(''); // 검색어 상태
-    const [itemsPerPage] = useState(20); // 페이지당 항목 수
-    const [currentPage, setCurrentPage] = useState(1); // 현재 페이지 번호
-    const [selectedCustomer, setSelectedCustomer] = useState(null); // 선택된 고객 정보
-    const [showRegisterModal, setShowRegisterModal] = useState(false); // 등록 모달 표시 여부
-    const [showDetailModal, setShowDetailModal] = useState(false); // 상세 모달 표시 여부
-    const [selectedCustomers, setSelectedCustomers] = useState([]); // 선택된 고객 번호 리스트
-    const [customers, setCustomers] = useState([]); // 전체 고객 리스트
-    const [filterType, setFilterType] = useState('active'); // 전체고객사, 삭제된 고객사 구분
-
-    const [sortColumn, setSortColumn] = useState('customerName'); // 기본적으로 정렬 열 customerName 설정
-    const [sortOrder, setSortOrder] = useState('asc'); // 기본 정렬은 오름차순
-
-    const fetchData = () => {
-        setLoading(true); // 로딩 시작
-        axios.get('/api/customer/getList')
+    // Active employees only
+    const pageEmployeesN = (page) => {
+        setLoading(true); // Start loading
+        axios.get(`/api/employeeList?page=${page}&size=20`)
             .then(response => {
-                if (Array.isArray(response.data)) {
-                    setCustomers(response.data);
-                    setLoading(false); // 로딩 종료
+                console.log('Response data:', response.data);
+                setEmployees(response.data.content);
+                setTotalPages(response.data.totalPages);
+                setSelectedEmployees(new Array(response.data.content.length).fill(false));
+                setLoading(false); // End loading
+            })
+
+    };
+
+    // Deleted employees only
+    const pageEmployeesY = (page) => {
+        setLoading(true); // Start loading
+        axios.get(`/api/employeeListY?page=${page}&size=20`)
+            .then(response => {
+                console.log('Response data:', response.data);
+                setEmployees(response.data.content);
+                setTotalPages(response.data.totalPages);
+                setSelectedEmployees(new Array(response.data.content.length).fill(false));
+                setLoading(false); // End loading
+            })
+
+    };
+
+    // All employees
+    const pageAllEmployees = (page) => {
+        setLoading(true); // Start loading
+        axios.get(`/api/allEmployees?page=${page}&size=20`)
+            .then(response => {
+                console.log('All employees query response data:', response.data);
+                setEmployees(response.data.content);
+                setTotalPages(response.data.totalPages);
+                setSelectedEmployees(new Array(response.data.content.length).fill(false));
+                setLoading(false); // End loading
+            });
+    };
+
+    // Select all checkbox
+    const handleSelectAll = () => {
+        const newSelectAll = !selectAll;
+        setSelectAll(newSelectAll);
+        setSelectedEmployees(new Array(employees.length).fill(newSelectAll));
+    };
+
+    // Individual checkbox
+    const handleSelect = (index) => {
+        const updatedSelection = [...selectedEmployees];
+        updatedSelection[index] = !updatedSelection[index];
+        setSelectedEmployees(updatedSelection);
+
+        if (updatedSelection.includes(false)) {
+            setSelectAll(false);
+        } else {
+            setSelectAll(true);
+        }
+    };
+
+    // When page changes
+    const PageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setPage(newPage);
+            if (currentView === 'employeesN') {
+                pageEmployeesN(newPage);  // View active employees only
+            } else if (currentView === 'employeesY') {
+                pageEmployeesY(newPage);  // View deleted employees only
+            } else if (currentView === 'allEmployees') {
+                pageAllEmployees(newPage);  // View all employees
+            }
+        }
+    };
+
+    // Paging when querying all employees including deleted ones
+    const PageChangeAllEmployees = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setPage(newPage);
+            pageAllEmployees(newPage);  // Change page with query including deleted employees
+        }
+    };
+
+    // Soft delete only checked items
+    const checkedDelete = () => {
+        const selectedId = employees
+            .filter((_, index) => selectedEmployees[index])  // Filter only selected employees
+            .map(employee => employee.employeeId);  // Extract IDs of selected employees
+
+        if (selectedId.length === 0) {
+            // Show warning message immediately when no items are checked
+            window.showToast("Please select employees to delete.", 'error');
+            return;  // Don't proceed further
+        }
+
+        // Ask for deletion confirmation only when items are selected
+        window.confirmCustom('Do you want to delete the selected employees?').then(result => {
+            if (result) {
+                // Send delete request to server
+                axios.post('/api/deleteEmployees', selectedId)
+                    .then(response => {
+                        window.showToast("Deletion completed.");
+                        pageEmployeesN(1);  // Refresh page after deletion
+                    })
+                    .catch(error => {
+                        console.error('Error occurred during deletion: ', error);
+                    });
+
+                console.log('Employee IDs to delete: ', selectedId);  // Log selected employee IDs
+            }
+        });
+    };
+
+    ////////////// Modal ///////////
+
+    // Open modify info modal
+    const openModifyModal = (employee) => {
+        // const selectedIndex = selectedEmployees.findIndex(selected => selected);
+        // if (selectedIndex === -1) {
+        //     window.showToast('Please select an employee to modify.', 'error');
+        //     return;
+        // }
+
+        // const employeeToModify = employees[selectedIndex];
+        //        if(!employee) {
+        //            console.error('No selected employee information');
+        //            return;
+        //        }
+        //        console.log(employee)
+        setSelectedEmployee(employee);
+        setShowModifyModal(true);
+    };
+
+    // Close modify info modal
+    const closeModifyModal = () => {
+        setShowModifyModal(false);
+        setSelectedEmployee(null);
+    };
+
+    // 🟢 Close window when modal background is clicked (modify)
+    const handleModifyBackgroundClick = (e) => {
+        if (e.target.className === 'modal_overlay') {
+            closeModifyModal();
+        }
+    };
+
+    // Save modified employee info and send to server
+    const handleModifySubmit = () => {
+        if (!validateEmployeeData(selectedEmployee)) return;
+
+        axios.put(`/api/updateEmployee/${selectedEmployee.employeeId}`, selectedEmployee)
+            .then(() => {
+                window.showToast("Employee information successfully modified.");
+                setShowModifyModal(false);
+                pageEmployeesN(page);
+            })
+            .catch(error => {
+                console.error('Error occurred during modification:', error);
+                window.showToast('An error occurred while modifying employee information.', 'error');
+            });
+    };
+
+    // Modify selected employee's information
+    const handleEmployeeChange = (field, value) => {
+        setSelectedEmployee(prevEmployee => ({
+            ...prevEmployee,
+            [field]: value
+        }));
+    };
+
+    // Delete (soft) from modify modal
+    const handleDelete = () => {
+        window.confirmCustom("Do you really want to delete?").then(result => {
+            if (result) {
+                if (selectedEmployee) {
+                    axios.put(`/api/deleteEmployee/${selectedEmployee.employeeId}`)
+                        .then(response => {
+                            window.showToast('Employee has been deleted.');
+                            closeModifyModal();
+                            pageEmployeesN(1);  // Refresh active employee list after deletion
+                        })
+                        .catch(error => {
+                            console.error('Error occurred during deletion:', error);
+                            window.showToast('An error occurred while deleting employee.', 'error');
+                        });
+                }
+            }
+        });
+    };
+
+    //////////////////From here is registration modal////////////////////////////////////////////////
+
+    // Registration modal
+    const openInsertModal = () => {
+        setNewEmployee({
+            employeeId: '',
+            employeePw: '',
+            employeeName: '',
+            employeeEmail: '',
+            employeeTel: '',
+            employeeRole: ''
+        });
+        setShowInsertModal(true);
+    };
+
+    // Close registration modal
+    const closeInsertModal = () => {
+        setShowInsertModal(false);
+    };
+
+    // 🟢 Close window when modal background is clicked (registration)
+    const handleInsertBackgroundClick = (e) => {
+        if (e.target.className === 'modal_overlay') {
+            closeInsertModal();
+        }
+    };
+
+    // Employee registration (duplicate check when button is pressed)
+    const InsertSubmit = () => {
+
+        if (newEmployee.employeeRole === '') {
+            window.showToast('Please select a role.', 'error');
+            return;
+        }
+
+        if (!validateEmployeeData(newEmployee)) {
+            return;
+        }
+
+        axios.get('/api/checkEmployeeId', { params: { employeeId: newEmployee.employeeId } })
+            .then(response => {
+                if (response.data) {
+
+                    window.showToast('This ID already exists.', 'error');
                 } else {
-                    console.error("Error: Expected an array but got ", typeof response.data);
+
+                    axios.post('/api/registerEmployee', newEmployee)
+                        .then(response => {
+                            window.showToast('Employee registration completed.');
+                            closeInsertModal();
+                            setNewEmployee({
+                                employeeId: '',
+                                employeePw: '',
+                                employeeName: '',
+                                employeeEmail: '',
+                                employeeTel: '',
+                                employeeRole: ''
+                            });
+                            pageEmployeesN(1); // Refresh to first page
+                        })
+                        .catch(error => {
+                            console.error('Error occurred: ', error);
+                            window.showToast('Error occurred during employee registration', 'error');
+                        });
                 }
             })
             .catch(error => {
-                console.error("Error fetching customer data:", error);
-                setLoading(false); // 로딩 종료
+                console.error('Error occurred during ID duplicate check:', error);
+                window.showToast('An error occurred during ID duplicate check.', 'error');
             });
     };
 
-    // 고객 목록 데이터 가져오기
-    useEffect(() => {
-        fetchData();
-    }, []);
+    // Validation (used for both registration and modification)
+    const validateEmployeeData = (employeeData) => {
+        const phoneRegex = /^\d{3}-\d{4}-\d{4}$/; // 000-0000-0000 format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // xxx@xxx.xxx format
+        const allowedRoles = ['admin', 'staff', 'manager'];
 
-    // 전체 고객사(삭제 포함) 표시 함수
-    const showAllCustomers = () => {
-        setFilterType('all');
-    };
-
-    // 등록된 고객사만 표시 함수
-    const showActiveCustomers = () => {
-        setFilterType('active')
-    };
-
-    // 삭제된 고객사만 표시 함수
-    const showDeletedCustomers = () => {
-        setFilterType('deleted')
-    };
-
-    // 검색어와 필터 타입에 따라 고객 리스트 필터링
-    const filteredCustomers = useMemo(() => {
-        let filtered = customers.filter(customer => {
-            // 필터링 로직 (filterType 및 검색어 적용)
-            const isIncludedByFilterType =
-                filterType === 'all' ||
-                (filterType === 'active' && customer.customerDeleteYn === 'N') ||
-                (filterType === 'deleted' && customer.customerDeleteYn === 'Y');
-
-            const searchText = filter.toLowerCase();
-            const isIncludedBySearch =
-                (customer.customerName ? customer.customerName.toLowerCase() : '').includes(searchText) ||
-                (customer.customerBusinessRegNo ? customer.customerBusinessRegNo.toLowerCase() : '').includes(searchText) ||
-                (customer.customerCountryCode ? customer.customerCountryCode.toLowerCase() : '').includes(searchText) ||
-                (customer.customerManagerName ? customer.customerManagerName.toLowerCase() : '').includes(searchText);
-
-            return isIncludedByFilterType && isIncludedBySearch;
-        });
-
-        // 정렬 로직 적용
-        filtered.sort((a, b) => {
-            let aValue = a[sortColumn] ? a[sortColumn].toString() : '';
-            let bValue = b[sortColumn] ? b[sortColumn].toString() : '';
-
-            // 숫자 컬럼 처리
-            if (sortColumn === 'customerNo') {
-                aValue = Number(aValue);
-                bValue = Number(bValue);
-                return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-            } else {
-                return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-            }
-        });
-
-        return filtered;
-    }, [customers, filterType, filter, sortColumn, sortOrder]);
-
-    // 고객 정렬 함수
-    const sortCustomers = (column) => {
-        const order = sortColumn === column && sortOrder === 'asc' ? 'desc' : 'asc';
-        setSortColumn(column);
-        setSortOrder(order);
-    };
-
-    // 고객 선택 처리 함수 (체크박스)
-    const handleSelectCustomer = (customerNo) => {
-        setSelectedCustomers(prevSelected =>
-            prevSelected.includes(customerNo)
-                ? prevSelected.filter(id => id !== customerNo)
-                : [...prevSelected, customerNo]
-        );
-    };
-
-    // 선택된 고객 삭제 처리 함수
-    const handleDeleteAll = () => {
-        if (selectedCustomers.length === 0) {
-            window.showToast('삭제할 고객을 선택하세요.', 'error');
-            return;
+        if (!phoneRegex.test(employeeData.employeeTel)) {
+            window.showToast('Please enter phone number in 000-0000-0000 format.', 'error');
+            return false;
         }
 
-        window.confirmCustom('선택한 고객을 모두 삭제하시겠습니까?').then(result => {
-            if (result) {
-                const deletePromises = selectedCustomers.map((customerNo) =>
-                    axios
-                        .delete(`/api/customer/delete/${customerNo}`)
-                        .then(() => {
-                            // 해당 고객의 customerDeleteYn을 'Y'로 변경
-                            setCustomers((prevCustomers) =>
-                                prevCustomers.map((c) =>
-                                    c.customerNo === customerNo
-                                        ? {
-                                            ...c,
-                                            customerDeleteYn: 'Y',
-                                            customerDeleteDate: new Date().toISOString(),
-                                        }
-                                        : c
-                                )
-                            );
-                        })
-                        .catch((error) => console.error('고객 삭제 중 오류:', error))
-                );
-                Promise.all(deletePromises).then(() => {
-                    setFilterType('deleted'); // 상태를 'deleted'로 변경하여 삭제된 항목을 바로 표시
-                    window.showToast('삭제 되었습니다.'); // 삭제 완료 메시지
-                    setSelectedCustomers([]); // 선택한 고객 초기화
-                });
-            }
-        });
-    };
-
-    // 검색어 삭제 버튼 클릭 처리 함수 (검색어 초기화 전용)
-    const handleFilterReset = () => {
-        setFilter(''); // 검색어 초기화
-    };
-
-    // 고객 저장 처리 함수 (등록 및 수정)
-    const handleSaveCustomer = (customerData) => {
-        if (selectedCustomer) {
-            // 수정 로직
-            axios
-                .put(`/api/customer/update/${selectedCustomer.customerNo}`, customerData)
-                .then((response) => {
-                    setCustomers(
-                        customers.map((c) =>
-                            c.customerNo === selectedCustomer.customerNo ? response.data : c
-                        )
-                    );
-                    setShowDetailModal(false);
-                    window.showToast('수정 되었습니다.'); // 수정 완료 메시지
-                })
-                .catch((error) => console.error('고객 수정 중 오류:', error));
-        } else {
-            // 등록 로직
-            axios
-                .post('/api/customer/register', customerData)
-                .then((response) => {
-                    setCustomers([...customers, response.data]);
-                    setShowRegisterModal(false);
-                    window.showToast('등록 되었습니다.'); // 등록 완료 메시지
-                })
-                .catch((error) => console.error('고객 등록 중 오류:', error));
+        if (!emailRegex.test(employeeData.employeeEmail)) {
+            window.showToast('Please enter a valid email format.', 'error');
+            return false;
         }
+
+        //        if (!allowedRoles.includes(employeeData.employeeRole.toLowerCase())) {
+        //            window.showToast('Role must be one of: admin, staff, manager.');
+        //            return false;
+        //        }
+
+
+        return true;
     };
 
-    // 고객 삭제 처리 함수
-    const handleDeleteCustomer = () => {
-        window.confirmCustom("정말 삭제하시겠습니까?").then(result => {
-            if (result) {
-                axios
-                    .delete(`/api/customer/delete/${selectedCustomer.customerNo}`)
-                    .then(() => {
-                        // 해당 고객의 customerDeleteYn을 'Y'로 변경
-                        setCustomers(
-                            customers.map((c) =>
-                                c.customerNo === selectedCustomer.customerNo
-                                    ? {
-                                        ...c,
-                                        customerDeleteYn: 'Y',
-                                        customerDeleteDate: new Date().toISOString(),
-                                    }
-                                    : c
-                            )
-                        );
-                        setFilterType('deleted'); // 상태를 'deleted'로 변경하여 삭제된 항목을 바로 표시
-                        window.showToast('삭제 되었습니다.'); // 삭제 완료 메시지
-                        setShowDetailModal(false);
-                    })
-                    .catch((error) => console.error('고객 삭제 중 오류:', error));
-            }
-        });
+    // Common function for search term delete button click
+    const handleSearchDel = (setSearch) => {
+        setSearch(''); // Commonly set state to ''
     };
 
-    // 검색어 삭제 버튼 클릭 처리 함수
-    const handleSearchDel = () => {
-        setFilter(''); // 검색어 초기화
-    };
-
-    // 고객 등록 모달 열기
-    const openRegisterModal = () => {
-        setSelectedCustomer(null); // 새 고객 등록 시 기존 선택된 고객 정보 초기화
-        setShowRegisterModal(true);
-    };
-
-    // 고객 등록 모달 닫기
-    const closeRegisterModal = () => setShowRegisterModal(false);
-
-    // 고객 상세 모달 열기
-    const openDetailModal = (customer) => {
-        setSelectedCustomer(customer); // 선택된 고객 정보 설정
-        setShowDetailModal(true); // 상세 모달창 띄우기
-    };
-
-    // 고객 상세 모달 닫기
-    const closeDetailModal = () => setShowDetailModal(false);
-
-    // 총 페이지 수 계산
-    const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
-
+    // 🟣 Rendering
     return (
-        <Layout currentMenu="customer">
-            <main className="main-content menu_customer">
+        <Layout currentMenu="employee"> {/* Layout component, currentMenu indicates the currently selected menu */}
+            <main className="main-content menu_employee">
                 <div className="menu_title">
-                    <div className="sub_title">고객 관리</div>
-                    <div className="main_title">고객사 목록</div>
+                    <div className="sub_title">Employee Management</div>
+                    <div className="main_title">Employee List</div>
                 </div>
                 <div className="menu_content">
                     <div className="search_wrap">
                         <div className="left">
-                            {/* 검색어 입력 */}
-                            <div className={`search_box ${filter ? 'has_text' : ''}`}>
-                                <label className={`label_floating ${filter ? 'active' : ''}`}>고객사, 사업자 등록번호, 국가코드, 담당자명 입력</label>
+                            <div className={`search_box ${searchEmployee ? 'has_text' : ''}`}>
+                                <label className={`label_floating ${searchEmployee ? 'active' : ''}`}>Enter name</label>
                                 <i className="bi bi-search"></i>
                                 <input
                                     type="text"
                                     className="box search"
-                                    value={filter}
-                                    onChange={(e) => setFilter(e.target.value)}
+                                    value={searchEmployee}
+                                    onChange={(e) => setSearchEmployee(e.target.value)}
                                 />
-                                {/* 검색어 삭제 버튼 */}
-                                {filter && (
+                                {/* Search term delete button */}
+                                {searchEmployee && (
                                     <button
                                         className="btn-del"
-                                        onClick={() => setFilter('')}
+                                        onClick={() => handleSearchDel(setSearchEmployee)} // Use common function
                                     >
                                         <i className="bi bi-x"></i>
                                     </button>
                                 )}
                             </div>
                             <div className="radio_box">
-                                <span>상태</span>
+                                <span>Status</span>
                                 <input
                                     type="radio"
                                     id="all"
                                     name="filterType"
-                                    value="all"
-                                    checked={filterType === 'all'}
-                                    onChange={showAllCustomers}
+                                    value="allEmployees"
+                                    checked={currentView === 'allEmployees'}
+                                    onClick={() => { setCurrentView('allEmployees'); setPage(1); pageAllEmployees(1); }}
                                 />
-                                <label htmlFor="all">전체</label>
+                                <label htmlFor="all">All</label>
                                 <input
                                     type="radio"
                                     id="active"
                                     name="filterType"
-                                    value="active"
-                                    checked={filterType === 'active'}
-                                    onChange={showActiveCustomers}
+                                    value="employeesN"
+                                    checked={currentView === 'employeesN'}
+                                    onClick={() => { setCurrentView('employeesN'); setPage(1); pageEmployeesN(1); }}
                                 />
-                                <label htmlFor="active">정상</label>
+                                <label htmlFor="active">Active</label>
                                 <input
                                     type="radio"
                                     id="deleted"
                                     name="filterType"
-                                    value="deleted"
-                                    checked={filterType === 'deleted'}
-                                    onChange={showDeletedCustomers}
+                                    value="employeesY"
+                                    checked={currentView === 'employeesY'}
+                                    onClick={() => { setCurrentView('employeesY'); setPage(1); pageEmployeesY(1); }}
                                 />
-                                <label htmlFor="deleted">삭제</label>
+                                <label htmlFor="deleted">Deleted</label>
                             </div>
                         </div>
                         <div className="right">
-                            <button className="box color" onClick={openRegisterModal}>
-                                <i className="bi bi-plus-circle"></i> 등록하기
-                            </button>
+                            <button className="box color" onClick={openInsertModal}><i className="bi bi-plus-circle"></i> Register</button>
                         </div>
                     </div>
                     <div className="table_wrap">
                         <table>
                             <thead>
-                                <tr>
-                                    <th>
-                                        <label className="chkbox_label">
-                                            <input
-                                                type="checkbox"
-                                                className="chkbox"
-                                                onChange={(e) => setSelectedCustomers(e.target.checked ? filteredCustomers.map(c => c.customerNo) : [])}
-                                            />
-                                            <i className="chkbox_icon">
-                                                <i className="bi bi-check-lg"></i>
-                                            </i>
-                                        </label>
-                                    </th>
-                                    <th>번호</th>
-                                    <th>
-                                        <div className={`order_wrap ${sortColumn === 'customerName' ? 'active' : ''}`}>
-                                            <span>고객사</span>
-                                            <button className="btn_order" onClick={() => sortCustomers('customerName')}>
-                                                <i className={`bi ${sortColumn === 'customerName' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortColumn === 'customerBusinessRegNo' ? 'active' : ''}`}>
-                                            <span>사업자 등록번호</span>
-                                            <button className="btn_order" onClick={() => sortCustomers('customerBusinessRegNo')}>
-                                                <i className={`bi ${sortColumn === 'customerBusinessRegNo' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortColumn === 'customerCountryCode' ? 'active' : ''}`}>
-                                            <span>국가코드</span>
-                                            <button className="btn_order" onClick={() => sortCustomers('customerCountryCode')}>
-                                                <i className={`bi ${sortColumn === 'customerCountryCode' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortColumn === 'customerManagerName' ? 'active' : ''}`}>
-                                            <span>담당자명</span>
-                                            <button className="btn_order" onClick={() => sortCustomers('customerManagerName')}>
-                                                <i className={`bi ${sortColumn === 'customerManagerName' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortColumn === 'customerInsertDate' ? 'active' : ''}`}>
-                                            <span>등록일시</span>
-                                            <button className="btn_order" onClick={() => sortCustomers('customerInsertDate')}>
-                                                <i className={`bi ${sortColumn === 'customerInsertDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortColumn === 'customerUpdateDate' ? 'active' : ''}`}>
-                                            <span>수정일시</span>
-                                            <button className="btn_order" onClick={() => sortCustomers('customerUpdateDate')}>
-                                                <i className={`bi ${sortColumn === 'customerUpdateDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortColumn === 'customerDeleteDate' ? 'active' : ''}`}>
-                                            <span>삭제일시</span>
-                                            <button className="btn_order" onClick={() => sortCustomers('customerDeleteDate')}>
-                                                <i className={`bi ${sortColumn === 'customerDeleteDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th></th>
-                                </tr>
+                            <tr>
+                                {/* Select all checkbox */}
+                                <th>
+                                    <label className="chkbox_label">
+                                        <input
+                                            type="checkbox" className="chkbox"
+                                            checked={selectAll}
+                                            onChange={handleSelectAll}
+                                        />
+                                        <i className="chkbox_icon">
+                                            <i className="bi bi-check-lg"></i>
+                                        </i>
+                                    </label>
+                                </th>
+                                <th>No.</th>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                {/*<th>Email</th>*/}
+                                <th>Role</th>
+                                <th>Registration Date</th>
+                                <th>Modified Date</th>
+                                <th>Deleted Date</th>
+                                <th></th>
+                            </tr>
                             </thead>
                             <tbody>
-                                {loading ? (
-                                    <tr className="tr_empty">
-                                        <td colSpan="10"> {/* 로딩 애니메이션 중앙 배치 */}
-                                            <div className="loading">
-                                                <span></span> {/* 첫 번째 원 */}
-                                                <span></span> {/* 두 번째 원 */}
-                                                <span></span> {/* 세 번째 원 */}
+                            {loading ? (
+                                <tr className="tr_empty">
+                                    <td colSpan="10"> {/* Center align loading animation */}
+                                        <div className="loading">
+                                            <span></span> {/* First circle */}
+                                            <span></span> {/* Second circle */}
+                                            <span></span> {/* Third circle */}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (searchEmployee ? filteredEmployees : employees).length === 0 ? (
+                                // Display tr_empty when no results found
+                                <tr className="tr_empty">
+                                    <td colSpan="10">
+                                        <div className="no_data">
+                                            <i className="bi bi-exclamation-triangle"></i>
+                                            No results found.
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                // Display employee list
+                                (searchEmployee ? filteredEmployees : employees).map((employee, index) => (
+                                    <tr key={employee.employeeId}
+                                        className={
+                                            selectedEmployees[index]
+                                                ? ('selected_row')  // Selected row
+                                                : ''
+                                        }
+                                    >
+                                        <td>
+                                            {/* Conditional rendering based on deleted status and admin check */}
+                                            {employee.employeeDeleteYn !== 'Y' ? (
+                                                employee.employeeId === 'admin' ? (
+                                                    <i class="bi bi-pin-angle-fill"></i>
+                                                ) : (
+                                                    <label className="chkbox_label">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="chkbox"
+                                                            checked={selectedEmployees[index] || false}
+                                                            onChange={() => handleSelect(index)}
+                                                        />
+                                                        <i className="chkbox_icon">
+                                                            <i className="bi bi-check-lg"></i>
+                                                        </i>
+                                                    </label>
+                                                )
+                                            ) : (
+                                                <span className="label_del">Deleted</span>
+                                            )}
+
+                                        </td>
+                                        <td>{(page - 1) * 20 + index + 1}</td>
+                                        <td>{employee.employeeId}</td>
+                                        <td>{employee.employeeName}</td>
+                                        <td>{employee.employeeTel}</td>
+                                        <td>
+                                            {/* Apply different label levels based on employeeRole */}
+                                            {employee.employeeRole === 'admin' && (
+                                                <span className="label_level level-1">admin</span>
+                                            )}
+                                            {employee.employeeRole === 'manager' && (
+                                                <span className="label_level level-2">manager</span>
+                                            )}
+                                            {employee.employeeRole === 'staff' && (
+                                                <span className="label_level level-3">staff</span>
+                                            )}
+                                        </td>
+                                        <td>{employee.employeeInsertDate ? format(employee.employeeInsertDate, 'yyyy-MM-dd HH:mm') : '-'}</td>
+                                        <td>{employee.employeeUpdateDate ? format(employee.employeeUpdateDate, 'yyyy-MM-dd HH:mm') : '-'}</td>
+                                        <td>{employee.employeeDeleteDate ? format(employee.employeeDeleteDate, 'yyyy-MM-dd HH:mm') : '-'}</td>
+                                        <td>
+                                            {/* Apply click event and style based on deleted status */}
+                                            <div className="btn_group">
+                                                <button
+                                                    className="box small"
+                                                    onClick={employee.employeeDeleteYn !== 'Y' ? () => openModifyModal(employee) : null}
+                                                    style={{
+                                                        opacity: employee.employeeDeleteYn === 'Y' ? 0 : 1,
+                                                        cursor: employee.employeeDeleteYn === 'Y' ? 'default' : 'pointer'
+                                                    }}
+                                                >
+                                                    Modify
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
-                                ) : filteredCustomers.length === 0 ? (
-                                    // 조회된 결과가 없을 때 tr_empty 표시
-                                    <tr className="tr_empty">
-                                        <td colSpan="10">
-                                            <div className="no_data">
-                                                <i className="bi bi-exclamation-triangle"></i>
-                                                조회된 결과가 없습니다.
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    //고객 리스트 표시
-                                    filteredCustomers
-                                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                                        .map((customer, index) => (
-                                            <tr key={customer.customerNo}
-                                                className={
-                                                    selectedCustomers.includes(customer.customerNo)
-                                                        ? ('selected_row')  // 선택된 행
-                                                        : ''
-                                                }
-                                            >
-                                                <td>
-                                                    {/* 삭제된 상태에 따라 조건부 렌더링 */}
-                                                    {customer.customerDeleteYn !== 'Y' ? (
-                                                        <label className="chkbox_label">
-                                                            <input
-                                                                type="checkbox"
-                                                                className="chkbox"
-                                                                checked={selectedCustomers.includes(customer.customerNo)}
-                                                                onChange={() => handleSelectCustomer(customer.customerNo)}
-                                                            />
-                                                            <i className="chkbox_icon">
-                                                                <i className="bi bi-check-lg"></i>
-                                                            </i>
-                                                        </label>
-                                                    ) : (
-                                                        <span className="label_del">삭제</span>
-                                                    )}
-                                                </td>
-                                                <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                                                <td>{customer.customerName || ''}</td>
-                                                <td>{customer.customerBusinessRegNo || ''}</td>
-                                                <td>{customer.customerCountryCode || ''}</td>
-                                                <td>{customer.customerManagerName || ''}</td>
-                                                <td>{formatDateTime(customer.customerInsertDate)}</td>
-                                                <td>{customer.customerUpdateDate ? formatDateTime(customer.customerUpdateDate) : '-'}</td>
-                                                <td>
-                                                    {customer.customerDeleteYn === 'Y' && customer.customerDeleteDate
-                                                        ? formatDateTime(customer.customerDeleteDate)
-                                                        : '-'}
-                                                </td>
-                                                <td>
-                                                    <div className="btn_group">
-                                                        <button className="box small" onClick={() => openDetailModal(customer)}>상세보기</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                )}
+                                ))
+                            )}
                             </tbody>
                         </table>
                     </div>
-                </div>
-                <div className="pagination-container">
-                    <div className="pagination-sub left">
-                        <button className="box" onClick={handleDeleteAll}><i className="bi bi-trash3"></i> 선택 삭제</button>
+                    <div className="pagination-container">
+                        <div className="pagination-sub left">
+                            <button className="box" onClick={checkedDelete}><i className="bi bi-trash3"></i>Delete Selected</button>
+                        </div>
+
+                        {/* Center: Pagination */}
+                        <div className="pagination">
+                            {/* 'First' button */}
+                            {page > 1 && (
+                                <button className="box icon first" onClick={() => PageChange(1)}>
+                                    <i className="bi bi-chevron-double-left"></i>
+                                </button>
+                            )}
+
+                            {/* 'Previous' button */}
+                            {page > 1 && (
+                                <button className="box icon left" onClick={() => PageChange(page - 1)}>
+                                    <i className="bi bi-chevron-left"></i>
+                                </button>
+                            )}
+
+                            {/* Page number block */}
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+                                const startPage = Math.floor((page - 1) / 5) * 5 + 1;
+                                const currentPage = startPage + index; // Changed to currentPage instead of page
+                                return (
+                                    currentPage <= totalPages && (
+                                        <button
+                                            key={currentPage}
+                                            onClick={() => PageChange(currentPage)}
+                                            className={currentPage === page ? 'box active' : 'box'} // Use currentPage instead of page in comparison
+                                        >
+                                            {currentPage}
+                                        </button>
+                                    )
+                                );
+                            })}
+
+                            {/* 'Next' button */}
+                            {page < totalPages && (
+                                <button className="box icon right" onClick={() => PageChange(page + 1)}>
+                                    <i className="bi bi-chevron-right"></i>
+                                </button>
+                            )}
+
+                            {/* 'Last' button */}
+                            {page < totalPages && (
+                                <button className="box icon last" onClick={() => PageChange(totalPages)}>
+                                    <i className="bi bi-chevron-double-right"></i>
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="pagination-sub right"></div>
                     </div>
-                    {/* 가운데: 페이지네이션 */}
-                    <div className="pagination">
-                        {/* '처음' 버튼 */}
-                        {currentPage > 1 && (
-                            <button className="box icon first" onClick={() => setCurrentPage(1)}>
-                                <i className="bi bi-chevron-double-left"></i>
-                            </button>
-                        )}
-
-                        {/* '이전' 버튼 */}
-                        {currentPage > 1 && (
-                            <button className="box icon left" onClick={() => setCurrentPage(currentPage - 1)}>
-                                <i className="bi bi-chevron-left"></i>
-                            </button>
-                        )}
-
-                        {/* 페이지 번호 블록 */}
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-                            const startPage = Math.floor((currentPage - 1) / 5) * 5 + 1;
-                            const page = startPage + index;
-                            return (
-                                page <= totalPages && (
-                                    <button
-                                        key={page}
-                                        onClick={() => setCurrentPage(page)}
-                                        className={currentPage === page ? 'box active' : 'box'}
-                                    >
-                                        {page}
-                                    </button>
-                                )
-                            );
-                        })}
-
-                        {/* '다음' 버튼 */}
-                        {currentPage < totalPages && (
-                            <button className="box icon right" onClick={() => setCurrentPage(currentPage + 1)}>
-                                <i className="bi bi-chevron-right"></i>
-                            </button>
-                        )}
-
-                        {/* '끝' 버튼 */}
-                        {currentPage < totalPages && (
-                            <button className="box icon last" onClick={() => setCurrentPage(totalPages)}>
-                                <i className="bi bi-chevron-double-right"></i>
-                            </button>
-                        )}
-                    </div>
-                    <div className="pagination-sub right"></div>
                 </div>
-
-                {/* 모달창 */}
-                <CustomerDetailModal
-                    show={showDetailModal}
-                    onClose={closeDetailModal}
-                    customer={selectedCustomer}
-                    onSave={handleSaveCustomer}
-                    onDelete={handleDeleteCustomer}
-                />
-                <CustomerRegisterModal
-                    show={showRegisterModal}
-                    onClose={closeRegisterModal}
-                    onSave={handleSaveCustomer}
-                    customerData={selectedCustomer}
-                />
             </main>
+
+            {showModifyModal && (
+                <div className="modal_overlay" onMouseDown={handleModifyBackgroundClick}>
+                    <div className='modal_container edit'>
+                        <div className="header">
+                            <div>Modify Employee Information</div>
+                            <button className="btn_close" onClick={closeModifyModal}><i className="bi bi-x-lg"></i></button> {/* Close modal button */}
+                        </div>
+                        <div className="edit_wrap">
+                            <div className='edit_form'>
+                                <div className='field_wrap'>
+                                    <label>ID</label>
+                                    <input
+                                        type='text'
+                                        className='box disabled'
+                                        value={selectedEmployee.employeeId}
+                                        disabled
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Password</label>
+                                    <input
+                                        type='password'
+                                        className='box'
+                                        placeholder='Please enter password'
+                                        value={selectedEmployee.employeePw}
+                                        onChange={(e) => handleEmployeeChange('employeePw', e.target.value)}
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Name</label>
+                                    <input
+                                        type='text'
+                                        className='box'
+                                        placeholder='Please enter name'
+                                        value={selectedEmployee.employeeName}
+                                        onChange={(e) => handleEmployeeChange('employeeName', e.target.value)}
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Email</label>
+                                    <input
+                                        type='text'
+                                        className='box'
+                                        placeholder='Please enter email'
+                                        value={selectedEmployee.employeeEmail}
+                                        onChange={(e) => handleEmployeeChange('employeeEmail', e.target.value)}
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Phone</label>
+                                    <input
+                                        type='text'
+                                        className='box'
+                                        placeholder='Please enter phone number'
+                                        value={selectedEmployee.employeeTel}
+                                        onChange={(e) => handleEmployeeChange('employeeTel', e.target.value)}
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Role</label>
+                                    <select
+                                        className='box'
+                                        value={selectedEmployee.employeeRole}
+                                        onChange={(e) => handleEmployeeChange('employeeRole', e.target.value)}
+                                    >
+                                        <option value="">Please select a role</option>
+                                        <option value="admin">admin</option>
+                                        <option value="staff">staff</option>
+                                        <option value="manager">manager</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="modal-actions">
+                                <button className="box blue" onClick={handleModifySubmit}>Modify</button>
+                                <button className="box red" onClick={handleDelete}>Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showInsertModal && (
+                <div className="modal_overlay" onMouseDown={handleInsertBackgroundClick}>
+                    <div className='modal_container edit'>
+                        <div className="header">
+                            <div>Register Employee Information</div>
+                            <button className="btn_close" onClick={closeInsertModal}><i className="bi bi-x-lg"></i></button> {/* Close modal button */}
+                        </div>
+                        <div className="edit_wrap">
+                            <div className='edit_form'>
+                                <div className='field_wrap'>
+                                    <label>ID</label>
+                                    <input
+                                        type='text'
+                                        className='box'
+                                        placeholder='Please enter ID'
+                                        value={newEmployee.employeeId}
+                                        onChange={(e) => setNewEmployee({ ...newEmployee, employeeId: e.target.value })}
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Password</label>
+                                    <input
+                                        type='password'
+                                        className='box'
+                                        placeholder='Please enter password'
+                                        value={newEmployee.employeePw}
+                                        onChange={(e) => setNewEmployee({ ...newEmployee, employeePw: e.target.value })}
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Name</label>
+                                    <input
+                                        type='text'
+                                        className='box'
+                                        placeholder='Please enter name'
+                                        value={newEmployee.employeeName}
+                                        onChange={(e) => setNewEmployee({ ...newEmployee, employeeName: e.target.value })}
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Email</label>
+                                    <input
+                                        type='text'
+                                        className='box'
+                                        placeholder='Please enter email'
+                                        value={newEmployee.employeeEmail}
+                                        onChange={(e) => setNewEmployee({ ...newEmployee, employeeEmail: e.target.value })}
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Phone</label>
+                                    <input
+                                        type='text'
+                                        className='box'
+                                        placeholder='Please enter phone number'
+                                        value={newEmployee.employeeTel}
+                                        onChange={(e) => setNewEmployee({ ...newEmployee, employeeTel: e.target.value })}
+                                    />
+                                </div>
+                                <div className='field_wrap'>
+                                    <label>Role</label>
+                                    <select
+                                        className='box'
+                                        value={newEmployee.employeeRole}
+                                        onChange={(e) => setNewEmployee({ ...newEmployee, employeeRole: e.target.value })}
+                                    >
+                                        <option value="">Please select a role</option>
+                                        <option value="admin">admin</option>
+                                        <option value="staff">staff</option>
+                                        <option value="manager">manager</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="modal-actions">
+                                <button className="box blue" onClick={InsertSubmit}>Register</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Layout>
     );
 }
 
-// 최종 렌더링
+// Root page JS is processed to be inserted into root
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
     <BrowserRouter>
-        <CustomerList />
+        <EmployeeList />
     </BrowserRouter>
 );

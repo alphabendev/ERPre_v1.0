@@ -9,27 +9,27 @@ function Footer() {
                 <div className="info-area">
                     <ul>
                         <li>
-                            <a href="#">공지사항</a>
+                            <a href="#">Notice</a>
                         </li>
                         <li>
-                            <a href="#">인사관리</a>
+                            <a href="#">HR Management</a>
                         </li>
                         <li>
-                            <a href="#">영업관리</a>
+                            <a href="#">Sales Management</a>
                         </li>
                         <li>
-                            <a href="#">상품관리</a>
+                            <a href="#">Product Management</a>
                         </li>
                         <li>
-                            <a href="#">이용약관</a>
+                            <a href="#">Terms of Service</a>
                         </li>
                     </ul>
                 </div>
                 <div className="copyright-area">
-                    <p>(주) IKEA Erpre Coperation | 대표: EREP:RE | 서울특별시 강남구 반포동 112-119 | 대표전화: 02-1234-5678</p>
-                    <p>사업자등록번호: 123-45-67890 | 통신판매업신고번호: 제1234-5678호 | 개인정보보호책임자: 한정우</p>
+                    <p>IKEA ERP Corporation | CEO: EREP:RE | 112-119 Banpo-dong, Gangnam-gu, Seoul | Tel: 02-1234-5678</p>
+                    <p>Business Registration Number: 123-45-67890 | Online Business Registration: No. 1234-5678 | Privacy Officer: Han Jeong-woo</p>
                 </div>
-                <span className="copyright">Copyright 2024 IKEA© All rights reserved.</span>
+                <span className="copyright">Copyright 2024 IKEA© All rights reserved.</span>
             </div>
         </footer>
     );

@@ -1,23 +1,23 @@
 import React, {useState} from 'react';
-import ReactDOM from 'react-dom/client'; // ReactDOM을 사용하여 React 컴포넌트를 DOM에 렌더링
-import {BrowserRouter, Routes, Route} from "react-router-dom"; // 리액트 라우팅 관련 라이브러리
-import Layout from "../../layout/Layout"; // 공통 레이아웃 컴포넌트를 임포트 (헤더, 푸터 등)
-import '../../../resources/static/css/hr/EmployeeRegister.css'; // 개별 CSS 스타일 적용
+import ReactDOM from 'react-dom/client'; // Use ReactDOM to render React components to the DOM
+import {BrowserRouter, Routes, Route} from "react-router-dom"; // React routing library
+import Layout from "../../layout/Layout"; // Import common layout component (header, footer, etc.)
+import '../../../resources/static/css/hr/EmployeeRegister.css'; // Apply individual CSS styles
 
-// 컴포넌트
+// Component
 function EmployeeRegister() {
     return (
-        <Layout currentMenu="employeeRegister"> {/* 레이아웃 컴포넌트, currentMenu는 현재 선택된 메뉴를 나타냄 */}
+        <Layout currentMenu="employeeRegister"> {/* Layout component, currentMenu indicates the currently selected menu */}
             <div className="top-container">
-                <h2>직원 등록</h2>
+                <h2>Employee Registration</h2>
             </div>
         </Layout>
     );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root')); // 루트 DOM 요소에 리액트 컴포넌트를 렌더링
+const root = ReactDOM.createRoot(document.getElementById('root')); // Render React component to the root DOM element
 root.render(
-    <BrowserRouter> {/* 리액트 라우터를 사용하여 클라이언트 사이드 라우팅 지원 */}
-        <EmployeeRegister/> {/* 컴포넌트 렌더링 */}
+    <BrowserRouter> {/* Use React Router to support client-side routing */}
+        <EmployeeRegister/> {/* Render component */}
     </BrowserRouter>
 );

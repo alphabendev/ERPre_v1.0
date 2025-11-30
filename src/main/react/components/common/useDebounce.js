@@ -1,17 +1,17 @@
 // src/main/react/components/common/useDebounce.js
 import { useState, useEffect } from 'react';
 
-// useDebounce 훅 정의
+// useDebounce hook definition
 export const useDebounce = (value, delay) => {
     const [debouncedValue, setDebouncedValue] = useState(value);
 
     useEffect(() => {
-        // 딜레이 이후에 값 설정
+        // Set value after delay
         const handler = setTimeout(() => {
             setDebouncedValue(value);
         }, delay);
 
-        // 클린업 함수로 타이머 정리
+        // Clean up timer with cleanup function
         return () => {
             clearTimeout(handler);
         };

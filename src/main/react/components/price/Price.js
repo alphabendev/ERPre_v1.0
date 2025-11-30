@@ -3,164 +3,164 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from "react-router-dom";
 import Layout from "../../layout/Layout";
-import '../../../resources/static/css/product/Price.css'; // 개별 CSS 파일 임포트
-import { format, differenceInDays } from 'date-fns'; // date-fns에서 날짜 포맷과 차이를 계산하는 함수 import
-import CustomerSearchModal from '../common/CustomerSearchModal'; // 고객사 검색 모달 임포트
-import ProductSearchModal from '../common/ProductSearchModal'; // 상품 검색 모달 임포트
-import Pagination from '../common/Pagination'; // 페이지네이션 컴포넌트 임포트
-import { useHooksList } from './PriceHooks'; // 가격 관리에 필요한 상태 및 로직을 처리하는 훅
-import PriceRow from './PriceRow'; // 분리한 PriceRow 컴포넌트 임포트
+import '../../../resources/static/css/product/Price.css'; // Import individual CSS file
+import { format, differenceInDays } from 'date-fns'; // Import date formatting and difference calculation functions from date-fns
+import CustomerSearchModal from '../common/CustomerSearchModal'; // Import customer search modal
+import ProductSearchModal from '../common/ProductSearchModal'; // Import product search modal
+import Pagination from '../common/Pagination'; // Import pagination component
+import { useHooksList } from './PriceHooks'; // Hook for handling price management states and logic
+import PriceRow from './PriceRow'; // Import separated PriceRow component
 
-// 컴포넌트(고객사별 상품 가격 관리)
+// Component (Customer-specific product price management)
 function Price() {
 
-    // 🔴 고객사검색, 상품 검색
+    // 🔴 Customer search, product search
     const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
     const [isProductModalOpen, setProductModalOpen] = useState(false);
-    const [selectedCustomer, setSelectedCustomer] = useState({ customerName: '고객사 선택', customerNo: '' });
-    const [selectedProduct, setSelectedProduct] = useState({ productNm: '상품 선택', productCd: '', productPrice: 0 });
+    const [selectedCustomer, setSelectedCustomer] = useState({ customerName: 'Select Customer', customerNo: '' });
+    const [selectedProduct, setSelectedProduct] = useState({ productNm: 'Select Product', productCd: '', productPrice: 0 });
 
-    // 🔴 고객사 선택 시 모달을 닫고 버튼에 값 설정
+    // 🔴 Close modal and set button value when customer is selected
     const handleCustomerSelect = (customer) => {
         console.log("🔴 customer.customerName : " + customer.customerName);
         setSelectedCustomer({
-            customerName: customer.customerName, // 선택한 고객 이름
-            customerNo: customer.customerNo      // 선택한 고객 번호
+            customerName: customer.customerName, // Selected customer name
+            customerNo: customer.customerNo      // Selected customer number
         });
         setCustomerModalOpen(false);
     };
-    1
-    // 🔴 상품 선택 시 모달을 닫고 버튼에 값 설정
+
+    // 🔴 Close modal and set button value when product is selected
     const handleProductSelect = (product) => {
         setSelectedProduct({
-            productNm: product.productNm,  // 선택된 상품 이름
-            productCd: product.productCd,   // 선택된 상품 코드
-            productPrice: product.productPrice   // 선택된 상품 가격
+            productNm: product.productNm,  // Selected product name
+            productCd: product.productCd,   // Selected product code
+            productPrice: product.productPrice   // Selected product price
         });
         setProductModalOpen(false);
     };
 
-    // 🔴 등록일시 정렬 함수
+    // 🔴 Registration date/time sorting function
     const handleSortClick = (field) => {
-        const newOrder = sortField === field ? (sortOrder === 'desc' ? 'asc' : 'desc') : 'asc'; // 정렬 필드가 현재 필드와 일치하면 토글, 일치하지 않으면 오름차순부터 시작
-        setSortField(field); // 정렬 필드 설정
-        setSortOrder(newOrder); // 새로운 정렬 순서 설정
+        const newOrder = sortField === field ? (sortOrder === 'desc' ? 'asc' : 'desc') : 'asc'; // Toggle if sort field matches current field, start with ascending if not matching
+        setSortField(field); // Set sort field
+        setSortOrder(newOrder); // Set new sort order
     };
 
-    // 🔴 커스텀 훅을 통해 상태와 함수 불러오기
+    // 🔴 Get states and functions through custom hook
     const {
-        priceList,               // 가격 리스트 상태 (고객사별 상품 가격 데이터를 담고 있는 배열)
-        isLoading,               // 로딩 상태 (데이터를 불러오는 중일 때 true로 설정)
+        priceList,               // Price list state (array containing customer-specific product price data)
+        isLoading,               // Loading state (set to true when loading data)
 
-        totalItems,              // 전체 항목 수 상태
-        itemsPerPage,            // 페이지당 항목 수 (사용자가 선택한 한 페이지에 표시할 데이터 개수)
-        handleItemsPerPageChange,// 페이지당 항목 수 변경 함수 (사용자가 페이지당 몇 개의 항목을 볼지 선택하는 함수)
+        totalItems,              // Total items count state
+        itemsPerPage,            // Items per page (number of data items to display per page selected by user)
+        handleItemsPerPageChange,// Items per page change function (function for user to select how many items to view per page)
 
-        handlePage,         // 페이지 변경 함수 (사용자가 페이지를 이동할 때 호출하는 함수)
-        totalPages,              // 총 페이지 수 (전체 데이터에서 페이지당 항목 수로 나눈 페이지 개수)
-        currentPage,             // 현재 페이지 (사용자가 현재 보고 있는 페이지 번호)
+        handlePage,         // Page change function (function called when user navigates pages)
+        totalPages,              // Total pages count (number of pages from total data divided by items per page)
+        currentPage,             // Current page (page number user is currently viewing)
 
-        pageInputValue,          // 페이지 입력 필드의 값
-        handlePageInputChange,   // 페이지 입력값 변경 함수 (입력된 페이지 번호를 변경하는 함수)
+        pageInputValue,          // Page input field value
+        handlePageInputChange,   // Page input value change function (function to change entered page number)
 
-        customerSearchText,              // 검색어 상태(고객사)
+        customerSearchText,              // Search term state (customer)
         setCustomerSearchText,
         handleCustomerSearchTextChange,
-        productSearchText,              // 검색어 상태(상품)
+        productSearchText,              // Search term state (product)
         setProductSearchText,
         handleProductSearchTextChange,
 
-        startDate,               // 시작 날짜 상태
+        startDate,               // Start date state
         setStartDate,
         handleStartDateChange,
-        endDate,                 // 종료 날짜 상태
+        endDate,                 // End date state
         setEndDate,
         handleEndDateChange,
-        targetDate,              // 적용 대상 날짜 상태
+        targetDate,              // Target application date state
         setTargetDate,
         handleTargetDateChange,
-        handleSearchDel,         // 공통 검색어/검색날짜 삭제 함수
+        handleSearchDel,         // Common search term/search date delete function
 
         isCurrentPriceChecked,
         setIsCurrentPriceChecked,
-        selectedStatus,          // 선택된 상태 (전체/정상/삭제)
-        handleStatusChange,      // 상태 변경 함수 (전체/정상/삭제 상태 변경)
+        selectedStatus,          // Selected status (all/active/deleted)
+        handleStatusChange,      // Status change function (all/active/deleted status change)
 
-        selectedItems,           // 선택된 항목 ID 배열
-        selectAll,               // 전체 선택 여부 상태
-        handleCheckboxChange,    // 개별 체크박스 선택/해제 함수
-        handleSelectAllChange,   // 전체 선택/해제 체크박스 클릭 함수
+        selectedItems,           // Selected item ID array
+        selectAll,               // Select all status
+        handleCheckboxChange,    // Individual checkbox select/deselect function
+        handleSelectAllChange,   // Select all/deselect checkbox click function
 
-        isAdding,                // 추가 상태 (새로운 항목 추가 버튼 클릭 여부)
-        newPriceData,            // 새로운 가격 데이터를 담는 상태
-        setIsAdding,             // 추가 상태 변경 함수 (추가하기 버튼 클릭 시 추가 상태 전환)
-        handleInputChange,       // 입력값 변경 함수 (사용자가 입력한 값이 상태에 반영됨)
+        isAdding,                // Adding state (whether add new item button is clicked)
+        newPriceData,            // State containing new price data
+        setIsAdding,             // Adding state change function (switch to adding state when add button clicked)
+        handleInputChange,       // Input value change function (user input values reflected in state)
         handleAdd,
-        handleAddSave,       // 새로운 가격을 추가하는 함수 (저장 버튼 클릭)
-        handleAddCancel,         // 추가 상태 취소 함수 (취소 버튼 클릭)
+        handleAddSave,       // Function to add new price (save button click)
+        handleAddCancel,         // Add state cancel function (cancel button click)
 
-        handleEdit,              // 수정 버튼 클릭 함수 (수정 모드로 전환)
-        editingId,               // 수정 중인 항목 ID (현재 수정 중인 항목의 ID)
-        editedPriceData,         // 수정 중인 항목 데이터를 담는 상태
-        handleSaveEdit,          // 수정 저장 함수 (수정된 데이터를 저장하는 함수)
-        handleCancelEdit,        // 수정 취소 함수 (수정 모드를 취소)
+        handleEdit,              // Edit button click function (switch to edit mode)
+        editingId,               // Item ID being edited (ID of item currently being edited)
+        editedPriceData,         // State containing item data being edited
+        handleSaveEdit,          // Edit save function (function to save edited data)
+        handleCancelEdit,        // Edit cancel function (cancel edit mode)
 
-        updateDeleteYn,            // 삭제/복원 버튼 클릭 함수
+        updateDeleteYn,            // Delete/restore button click function
         handleDelete,
         handleRestore,
-        handleDeleteSelected,    // 선택 삭제
+        handleDeleteSelected,    // Delete selected
 
         sortField,
         setSortField,
         sortOrder,
         setSortOrder,
         fetchData,
-    } = useHooksList();          // 커스텀 훅 사용
+    } = useHooksList();          // Use custom hook
 
-    // 🟡 UI 및 상태에 따라 렌더링
+    // 🟡 Render based on UI and state
     return (
         <Layout currentMenu="productPrice">
             <main className="main-content menu_price">
                 <div className="menu_title">
-                    <div className="sub_title">상품 관리</div>
-                    <div className="main_title">고객사별 상품 가격 관리</div>
+                    <div className="sub_title">Product Management</div>
+                    <div className="main_title">Customer-specific Product Price Management</div>
                 </div>
                 <div className="menu_content">
                     <div className="search_wrap">
                         <div className="left">
-                            {/* 1️⃣ 오늘 적용되는 가격만 보기 (체크박스) */}
+                            {/* 1️⃣ Show only prices applied today (checkbox) */}
                             <div className="checkbox_box">
                                 <input
                                     type="checkbox"
                                     id="currentPrice"
                                     name="status"
-                                    checked={isCurrentPriceChecked} // 체크박스 상태
-                                    onChange={(e) => setIsCurrentPriceChecked(e.target.checked)} // 체크 상태 업데이트
+                                    checked={isCurrentPriceChecked} // Checkbox state
+                                    onChange={(e) => setIsCurrentPriceChecked(e.target.checked)} // Update check state
                                 />
-                                <label htmlFor="currentPrice"><i className="bi bi-check-lg"></i> 오늘</label>
+                                <label htmlFor="currentPrice"><i className="bi bi-check-lg"></i> Today</label>
                             </div>
-                            {/* 2️⃣ 적용 대상일(ex. 내일 적용되는 가격들만 보기) */}
+                            {/* 2️⃣ Target application date (ex. show only prices applied tomorrow) */}
                             <div className={`date_box ${targetDate ? 'has_text' : ''}`}>
-                                <label>적용 대상일</label>
+                                <label>Target Application Date</label>
                                 <input
                                     type="date"
                                     max="9999-12-31"
                                     value={targetDate || ''}
                                     onChange={(e) => handleTargetDateChange(e.target.value)}
                                 />
-                                {/* 날짜 삭제 버튼 */}
+                                {/* Date delete button */}
                                 {targetDate && (
                                     <button
                                         className="btn-del"
-                                        onClick={() => handleSearchDel(setTargetDate)} // 공통 함수 사용
+                                        onClick={() => handleSearchDel(setTargetDate)} // Use common function
                                     >
                                         <i className="bi bi-x"></i>
                                     </button>
                                 )}
                             </div>
-                            {/* 3️⃣ 검색어 입력 */}
+                            {/* 3️⃣ Search term input */}
                             <div className={`search_box ${customerSearchText ? 'has_text' : ''}`}>
-                                <label className="label_floating">고객사 입력</label>
+                                <label className="label_floating">Enter customer name</label>
                                 <i className="bi bi-search"></i>
                                 <input
                                     type="text"
@@ -168,18 +168,18 @@ function Price() {
                                     value={customerSearchText}
                                     onChange={handleCustomerSearchTextChange}
                                 />
-                                {/* 검색어 삭제 버튼 */}
+                                {/* Search term delete button */}
                                 {customerSearchText && (
                                     <button
                                         className="btn-del"
-                                        onClick={() => handleSearchDel(setCustomerSearchText)} // 공통 함수 사용
+                                        onClick={() => handleSearchDel(setCustomerSearchText)} // Use common function
                                     >
                                         <i className="bi bi-x"></i>
                                     </button>
                                 )}
                             </div>
                             <div className={`search_box ${productSearchText ? 'has_text' : ''}`}>
-                                <label className="label_floating">상품명, 상품코드 입력</label>
+                                <label className="label_floating">Enter product name, product code</label>
                                 <i className="bi bi-search"></i>
                                 <input
                                     type="text"
@@ -187,56 +187,56 @@ function Price() {
                                     value={productSearchText}
                                     onChange={handleProductSearchTextChange}
                                 />
-                                {/* 검색어 삭제 버튼 */}
+                                {/* Search term delete button */}
                                 {productSearchText && (
                                     <button
                                         className="btn-del"
-                                        onClick={() => handleSearchDel(setProductSearchText)} // 공통 함수 사용
+                                        onClick={() => handleSearchDel(setProductSearchText)} // Use common function
                                     >
                                         <i className="bi bi-x"></i>
                                     </button>
                                 )}
                             </div>
-                            {/* 4️⃣ 적용 기간 입력(ex. 25년 1월 1일부터 적용되는 가격들만 보기) */}
+                            {/* 4️⃣ Application period input (ex. show only prices applied from Jan 1, 2025) */}
                             <div className={`date_box ${startDate ? 'has_text' : ''}`}>
-                                <label>적용 시작일</label>
+                                <label>Application Start Date</label>
                                 <input
                                     type="date"
                                     max="9999-12-31"
                                     value={startDate || ''}
                                     onChange={(e) => handleStartDateChange(e.target.value)}
                                 />
-                                {/* 날짜 삭제 버튼 */}
+                                {/* Date delete button */}
                                 {startDate && (
                                     <button
                                         className="btn-del"
-                                        onClick={() => handleSearchDel(setStartDate)} // 공통 함수 사용
+                                        onClick={() => handleSearchDel(setStartDate)} // Use common function
                                     >
                                         <i className="bi bi-x"></i>
                                     </button>
                                 )}
                             </div>
                             <div className={`date_box ${endDate ? 'has_text' : ''}`}>
-                                <label>적용 종료일</label>
+                                <label>Application End Date</label>
                                 <input
                                     type="date"
                                     max="9999-12-31"
                                     value={endDate || ''}
                                     onChange={(e) => handleEndDateChange(e.target.value)}
                                 />
-                                {/* 날짜 삭제 버튼 */}
+                                {/* Date delete button */}
                                 {endDate && (
                                     <button
                                         className="btn-del"
-                                        onClick={() => handleSearchDel(setEndDate)} // 공통 함수 사용
+                                        onClick={() => handleSearchDel(setEndDate)} // Use common function
                                     >
                                         <i className="bi bi-x"></i>
                                     </button>
                                 )}
                             </div>
-                            {/* 5️⃣ 상태 선택 */}
+                            {/* 5️⃣ Status selection */}
                             <div className="radio_box">
-                                <span>상태</span>
+                                <span>Status</span>
                                 <input
                                     type="radio"
                                     id="all"
@@ -244,7 +244,7 @@ function Price() {
                                     checked={selectedStatus === "all"}
                                     onChange={handleStatusChange}
                                 />
-                                <label htmlFor="all">전체</label>
+                                <label htmlFor="all">All</label>
                                 <input
                                     type="radio"
                                     id="active"
@@ -252,7 +252,7 @@ function Price() {
                                     checked={selectedStatus === "active"}
                                     onChange={handleStatusChange}
                                 />
-                                <label htmlFor="active">정상</label>
+                                <label htmlFor="active">Active</label>
                                 <input
                                     type="radio"
                                     id="deleted"
@@ -260,232 +260,232 @@ function Price() {
                                     checked={selectedStatus === "deleted"}
                                     onChange={handleStatusChange}
                                 />
-                                <label htmlFor="deleted">삭제</label>
+                                <label htmlFor="deleted">Deleted</label>
                             </div>
                         </div>
                         <div className="right">
-                            <button className="box color" onClick={handleAdd} disabled={isAdding}><i className="bi bi-plus-circle"></i> 추가하기</button>
+                            <button className="box color" onClick={handleAdd} disabled={isAdding}><i className="bi bi-plus-circle"></i> Add New</button>
                         </div>
                     </div>
                     <div className="table_wrap">
                         <table>
                             <thead>
-                                <tr>
-                                    {/* 전체 선택 체크박스 */}
-                                    <th>
-                                        <label className="chkbox_label">
-                                            <input
-                                                type="checkbox" className="chkbox"
-                                                onChange={handleSelectAllChange}
-                                                checked={selectAll}
-                                                disabled={isAdding || !!editingId}
-                                            />
-                                            <i className="chkbox_icon">
-                                                <i className="bi bi-check-lg"></i>
-                                            </i>
-                                        </label>
-                                    </th>
-                                    <th>번호</th>
-                                    <th>
-                                        <div className={`order_wrap ${sortField === 'customer.customerName' ? 'active' : ''}`}>
-                                            <span>고객사</span>
-                                            <button className="btn_order" onClick={() => handleSortClick('customer.customerName')}>
-                                                <i className={`bi ${sortField === 'customer.customerName' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortField === 'product.productNm' ? 'active' : ''}`}>
-                                            <span>상품</span>
-                                            <button className="btn_order" onClick={() => handleSortClick('product.productNm')}>
-                                                <i className={`bi ${sortField === 'product.productNm' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortField === 'priceCustomer' ? 'active' : ''}`}>
-                                            <span>가격(원)</span>
-                                            <button className="btn_order" onClick={() => handleSortClick('priceCustomer')}>
-                                                <i className={`bi ${sortField === 'priceCustomer' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortField === 'priceStartDate' ? 'active' : ''}`}>
-                                            <span>적용시작일</span>
-                                            <button className="btn_order" onClick={() => handleSortClick('priceStartDate')}>
-                                                <i className={`bi ${sortField === 'priceStartDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortField === 'priceEndDate' ? 'active' : ''}`}>
-                                            <span>적용종료일</span>
-                                            <button className="btn_order" onClick={() => handleSortClick('priceEndDate')}>
-                                                <i className={`bi ${sortField === 'priceEndDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortField === 'priceInsertDate' ? 'active' : ''}`}>
-                                            <span>등록일시</span>
-                                            <button className="btn_order" onClick={() => handleSortClick('priceInsertDate')}>
-                                                <i className={`bi ${sortField === 'priceInsertDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortField === 'priceUpdateDate' ? 'active' : ''}`}>
-                                            <span>수정일시</span>
-                                            <button className="btn_order" onClick={() => handleSortClick('priceUpdateDate')}>
-                                                <i className={`bi ${sortField === 'priceUpdateDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    <th>
-                                        <div className={`order_wrap ${sortField === 'priceDeleteDate' ? 'active' : ''}`}>
-                                            <span>삭제일시</span>
-                                            <button className="btn_order" onClick={() => handleSortClick('priceDeleteDate')}>
-                                                <i className={`bi ${sortField === 'priceDeleteDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
-                                            </button>
-                                        </div>
-                                    </th>
-                                    {/* 수정/삭제 버튼 */}
-                                    <th></th>
-                                </tr>
+                            <tr>
+                                {/* Select all checkbox */}
+                                <th>
+                                    <label className="chkbox_label">
+                                        <input
+                                            type="checkbox" className="chkbox"
+                                            onChange={handleSelectAllChange}
+                                            checked={selectAll}
+                                            disabled={isAdding || !!editingId}
+                                        />
+                                        <i className="chkbox_icon">
+                                            <i className="bi bi-check-lg"></i>
+                                        </i>
+                                    </label>
+                                </th>
+                                <th>No.</th>
+                                <th>
+                                    <div className={`order_wrap ${sortField === 'customer.customerName' ? 'active' : ''}`}>
+                                        <span>Customer</span>
+                                        <button className="btn_order" onClick={() => handleSortClick('customer.customerName')}>
+                                            <i className={`bi ${sortField === 'customer.customerName' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div className={`order_wrap ${sortField === 'product.productNm' ? 'active' : ''}`}>
+                                        <span>Product</span>
+                                        <button className="btn_order" onClick={() => handleSortClick('product.productNm')}>
+                                            <i className={`bi ${sortField === 'product.productNm' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div className={`order_wrap ${sortField === 'priceCustomer' ? 'active' : ''}`}>
+                                        <span>Price (KRW)</span>
+                                        <button className="btn_order" onClick={() => handleSortClick('priceCustomer')}>
+                                            <i className={`bi ${sortField === 'priceCustomer' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div className={`order_wrap ${sortField === 'priceStartDate' ? 'active' : ''}`}>
+                                        <span>Application Start Date</span>
+                                        <button className="btn_order" onClick={() => handleSortClick('priceStartDate')}>
+                                            <i className={`bi ${sortField === 'priceStartDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div className={`order_wrap ${sortField === 'priceEndDate' ? 'active' : ''}`}>
+                                        <span>Application End Date</span>
+                                        <button className="btn_order" onClick={() => handleSortClick('priceEndDate')}>
+                                            <i className={`bi ${sortField === 'priceEndDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div className={`order_wrap ${sortField === 'priceInsertDate' ? 'active' : ''}`}>
+                                        <span>Registration Date/Time</span>
+                                        <button className="btn_order" onClick={() => handleSortClick('priceInsertDate')}>
+                                            <i className={`bi ${sortField === 'priceInsertDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div className={`order_wrap ${sortField === 'priceUpdateDate' ? 'active' : ''}`}>
+                                        <span>Edit Date/Time</span>
+                                        <button className="btn_order" onClick={() => handleSortClick('priceUpdateDate')}>
+                                            <i className={`bi ${sortField === 'priceUpdateDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th>
+                                    <div className={`order_wrap ${sortField === 'priceDeleteDate' ? 'active' : ''}`}>
+                                        <span>Deletion Date/Time</span>
+                                        <button className="btn_order" onClick={() => handleSortClick('priceDeleteDate')}>
+                                            <i className={`bi ${sortField === 'priceDeleteDate' ? (sortOrder === 'desc' ? 'bi-arrow-down' : 'bi-arrow-up') : 'bi-arrow-up'}`}></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                {/* Edit/Delete buttons */}
+                                <th></th>
+                            </tr>
                             </thead>
                             <tbody>
-                                {/* 추가 상태일 때 새로운 입력 행 추가 */}
-                                {isAdding && (
-                                    <PriceRow
-                                        isEditMode={false} // 등록 모드
-                                        priceData={newPriceData}
-                                        selectedCustomer={selectedCustomer}
-                                        selectedProduct={selectedProduct}
-                                        handleInputChange={handleInputChange}
-                                        onSave={handleAddSave}
-                                        onCancel={handleAddCancel}
-                                        setCustomerModalOpen={setCustomerModalOpen}
-                                        setProductModalOpen={setProductModalOpen}
-                                        setSelectedCustomer={setSelectedCustomer}
-                                        setSelectedProduct={setSelectedProduct}
-                                    />
-                                )}
+                            {/* Add new input row when in adding state */}
+                            {isAdding && (
+                                <PriceRow
+                                    isEditMode={false} // Registration mode
+                                    priceData={newPriceData}
+                                    selectedCustomer={selectedCustomer}
+                                    selectedProduct={selectedProduct}
+                                    handleInputChange={handleInputChange}
+                                    onSave={handleAddSave}
+                                    onCancel={handleAddCancel}
+                                    setCustomerModalOpen={setCustomerModalOpen}
+                                    setProductModalOpen={setProductModalOpen}
+                                    setSelectedCustomer={setSelectedCustomer}
+                                    setSelectedProduct={setSelectedProduct}
+                                />
+                            )}
 
-                                {/* 로딩 중일 때 로딩 이미지 표시 */}
-                                {isLoading ? (
+                            {/* Show loading image when loading */}
+                            {isLoading ? (
+                                <tr className="tr_empty">
+                                    <td colSpan="10"> {/* Center loading animation */}
+                                        <div className="loading">
+                                            <span></span> {/* First circle */}
+                                            <span></span> {/* Second circle */}
+                                            <span></span> {/* Third circle */}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                priceList.length > 0 ? (
+                                    priceList.map((m_price, index) => (
+                                        editingId === m_price.priceNo ? (
+                                            <PriceRow
+                                                key={m_price.priceNo}
+                                                isEditMode={true} // Edit mode
+                                                priceData={editedPriceData}
+                                                selectedCustomer={selectedCustomer}
+                                                selectedProduct={selectedProduct}
+                                                handleInputChange={handleInputChange}
+                                                onSave={handleSaveEdit}
+                                                onCancel={handleCancelEdit}
+                                                setCustomerModalOpen={setCustomerModalOpen}
+                                                setProductModalOpen={setProductModalOpen}
+                                                setSelectedCustomer={setSelectedCustomer}
+                                                setSelectedProduct={setSelectedProduct}
+                                                currentPage={currentPage}
+                                                itemsPerPage={itemsPerPage}
+                                                index={index}
+                                                priceInsertDate={m_price.priceInsertDate}
+                                                priceUpdateDate={m_price.priceUpdateDate}
+                                            />
+                                        ) : (
+                                            // Show existing data when not in edit mode
+                                            <tr key={m_price.priceNo}
+                                                className={
+                                                    selectedItems.includes(m_price.priceNo)
+                                                        ? ('selected_row')  // Selected row
+                                                        : ''
+                                                }
+                                            >
+                                                <td>
+                                                    {/* Conditional rendering based on deleted status */}
+                                                    {m_price.priceDeleteYn !== 'Y' ? (
+                                                        <label className="chkbox_label">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="chkbox"
+                                                                checked={selectedItems.includes(m_price.priceNo)}
+                                                                onChange={() => handleCheckboxChange(m_price.priceNo)}
+                                                                disabled={isAdding || !!editingId}
+                                                            />
+                                                            <i className="chkbox_icon">
+                                                                <i className="bi bi-check-lg"></i>
+                                                            </i>
+                                                        </label>
+                                                    ) : (
+                                                        <span className="label_del">Deleted</span>
+                                                    )}
+                                                </td>
+                                                <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                                                <td>{m_price.customerName}</td>
+                                                <td>
+                                                    <p>{m_price.productNm}</p>
+                                                    <p style={{ fontSize: '14px', color: '#999', marginTop: '2px' }}>{m_price.categoryPath}</p>
+                                                </td>
+                                                <td><b>{m_price.priceCustomer.toLocaleString()}</b> KRW</td>
+                                                <td><div className='date_wrap'><i className="bi bi-calendar-check"></i>{format(m_price.priceStartDate, 'yyyy-MM-dd')}</div></td> {/* Application start date */}
+                                                <td>
+                                                    <div className='date_wrap'>
+                                                        <i className="bi bi-calendar-check"></i>
+                                                        {format(m_price.priceEndDate, 'yyyy-MM-dd')} {/* Application end date */}
+                                                    </div>
+                                                    <span className='diffdays'> (Total {differenceInDays(new Date(m_price.priceEndDate), new Date(m_price.priceStartDate)) + 1} days)</span> {/* Display application period */}
+                                                </td>
+                                                <td>{format(m_price.priceInsertDate, 'yy-MM-dd HH:mm')}</td>
+                                                <td>{m_price.priceUpdateDate ? format(m_price.priceUpdateDate, 'yy-MM-dd HH:mm') : '-'}</td>
+                                                <td>{m_price.priceDeleteDate ? format(m_price.priceDeleteDate, 'yy-MM-dd HH:mm') : '-'}</td>
+                                                <td>
+                                                    <div className='btn_group'>
+                                                        {m_price.priceDeleteYn === 'Y' ? (
+                                                            <button className="box icon hover_text restore" onClick={() => handleRestore(m_price.priceNo)}>
+                                                                <i className="bi bi-arrow-clockwise"></i>{/* Restore */}
+                                                            </button>
+                                                        ) : (
+                                                            <>
+                                                                <button className="box icon hover_text edit" onClick={() => handleEdit(m_price.priceNo)}>
+                                                                    <i className="bi bi-pencil-square"></i>{/* Edit */}
+                                                                </button>
+                                                                <button className="box icon hover_text del" onClick={() => handleDelete(m_price.priceNo)}>
+                                                                    <i className="bi bi-trash"></i>{/* Delete */}
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    ))
+                                ) : (
                                     <tr className="tr_empty">
-                                        <td colSpan="10"> {/* 로딩 애니메이션 중앙 배치 */}
-                                            <div className="loading">
-                                                <span></span> {/* 첫 번째 원 */}
-                                                <span></span> {/* 두 번째 원 */}
-                                                <span></span> {/* 세 번째 원 */}
-                                            </div>
+                                        <td colSpan="10">
+                                            <div className="no_data"><i className="bi bi-exclamation-triangle"></i>No results found.</div>
                                         </td>
                                     </tr>
-                                ) : (
-                                    priceList.length > 0 ? (
-                                        priceList.map((m_price, index) => (
-                                            editingId === m_price.priceNo ? (
-                                                <PriceRow
-                                                    key={m_price.priceNo}
-                                                    isEditMode={true} // 수정 모드
-                                                    priceData={editedPriceData}
-                                                    selectedCustomer={selectedCustomer}
-                                                    selectedProduct={selectedProduct}
-                                                    handleInputChange={handleInputChange}
-                                                    onSave={handleSaveEdit}
-                                                    onCancel={handleCancelEdit}
-                                                    setCustomerModalOpen={setCustomerModalOpen}
-                                                    setProductModalOpen={setProductModalOpen}
-                                                    setSelectedCustomer={setSelectedCustomer}
-                                                    setSelectedProduct={setSelectedProduct}
-                                                    currentPage={currentPage}
-                                                    itemsPerPage={itemsPerPage}
-                                                    index={index}
-                                                    priceInsertDate={m_price.priceInsertDate}
-                                                    priceUpdateDate={m_price.priceUpdateDate}
-                                                />
-                                            ) : (
-                                                // 수정 모드가 아닐 경우 기존 데이터를 보여줌
-                                                <tr key={m_price.priceNo}
-                                                    className={
-                                                        selectedItems.includes(m_price.priceNo)
-                                                            ? ('selected_row')  // 선택된 행
-                                                            : ''
-                                                    }
-                                                >
-                                                    <td>
-                                                        {/* 삭제된 상태에 따라 조건부 렌더링 */}
-                                                        {m_price.priceDeleteYn !== 'Y' ? (
-                                                            <label className="chkbox_label">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    className="chkbox"
-                                                                    checked={selectedItems.includes(m_price.priceNo)}
-                                                                    onChange={() => handleCheckboxChange(m_price.priceNo)}
-                                                                    disabled={isAdding || !!editingId}
-                                                                />
-                                                                <i className="chkbox_icon">
-                                                                    <i className="bi bi-check-lg"></i>
-                                                                </i>
-                                                            </label>
-                                                        ) : (
-                                                            <span className="label_del">삭제</span>
-                                                        )}
-                                                    </td>
-                                                    <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                                                    <td>{m_price.customerName}</td>
-                                                    <td>
-                                                        <p>{m_price.productNm}</p>
-                                                        <p style={{ fontSize: '14px', color: '#999', marginTop: '2px' }}>{m_price.categoryPath}</p>
-                                                    </td>
-                                                    <td><b>{m_price.priceCustomer.toLocaleString()}</b>원</td>
-                                                    <td><div className='date_wrap'><i className="bi bi-calendar-check"></i>{format(m_price.priceStartDate, 'yyyy-MM-dd')}</div></td> {/* 적용시작일 */}
-                                                    <td>
-                                                        <div className='date_wrap'>
-                                                            <i className="bi bi-calendar-check"></i>
-                                                            {format(m_price.priceEndDate, 'yyyy-MM-dd')} {/* 적용종료일 */}
-                                                        </div>
-                                                        <span className='diffdays'> (총 {differenceInDays(new Date(m_price.priceEndDate), new Date(m_price.priceStartDate)) + 1}일)</span> {/* 적용기간 표시 */}
-                                                    </td>
-                                                    <td>{format(m_price.priceInsertDate, 'yy-MM-dd HH:mm')}</td>
-                                                    <td>{m_price.priceUpdateDate ? format(m_price.priceUpdateDate, 'yy-MM-dd HH:mm') : '-'}</td>
-                                                    <td>{m_price.priceDeleteDate ? format(m_price.priceDeleteDate, 'yy-MM-dd HH:mm') : '-'}</td>
-                                                    <td>
-                                                        <div className='btn_group'>
-                                                            {m_price.priceDeleteYn === 'Y' ? (
-                                                                <button className="box icon hover_text restore" onClick={() => handleRestore(m_price.priceNo)}>
-                                                                    <i className="bi bi-arrow-clockwise"></i>{/* 복원 */}
-                                                                </button>
-                                                            ) : (
-                                                                <>
-                                                                    <button className="box icon hover_text edit" onClick={() => handleEdit(m_price.priceNo)}>
-                                                                        <i className="bi bi-pencil-square"></i>{/* 수정 */}
-                                                                    </button>
-                                                                    <button className="box icon hover_text del" onClick={() => handleDelete(m_price.priceNo)}>
-                                                                        <i className="bi bi-trash"></i>{/* 삭제 */}
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )
-                                        ))
-                                    ) : (
-                                        <tr className="tr_empty">
-                                            <td colSpan="10">
-                                                <div className="no_data"><i className="bi bi-exclamation-triangle"></i>조회된 결과가 없습니다.</div>
-                                            </td>
-                                        </tr>
-                                    )
-                                )}
+                                )
+                            )}
                             </tbody>
                         </table>
                     </div>
 
-                    {/* 페이지네이션 컴포넌트 사용 */}
+                    {/* Use pagination component */}
                     <Pagination
                         currentPage={currentPage}
                         totalPages={totalPages}
@@ -496,21 +496,21 @@ function Price() {
                         handlePage={handlePage}
                         handleItemsPerPageChange={handleItemsPerPageChange}
                         handlePageInputChange={handlePageInputChange}
-                        handleDeleteSelected={handleDeleteSelected} // 선택 삭제 함수
-                        selectedItems={selectedItems} // 선택된 항목 배열 전달
+                        handleDeleteSelected={handleDeleteSelected} // Delete selected function
+                        selectedItems={selectedItems} // Pass selected items array
                         showFilters={true}
                     />
 
                 </div>
             </main>
-            {/* 고객사 검색 모달 */}
+            {/* Customer search modal */}
             {isCustomerModalOpen && (
                 <CustomerSearchModal
                     onClose={() => setCustomerModalOpen(false)}
                     onCustomerSelect={handleCustomerSelect}
                 />
             )}
-            {/* 상품 검색 모달 */}
+            {/* Product search modal */}
             {isProductModalOpen && (
                 <ProductSearchModal
                     onClose={() => setProductModalOpen(false)}
@@ -527,4 +527,3 @@ root.render(
         <Price />
     </BrowserRouter>
 );
-

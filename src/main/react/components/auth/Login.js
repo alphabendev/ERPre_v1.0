@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom/client'; // ReactDOM을 사용하여 React 컴포넌트를 DOM에 렌더링
+import ReactDOM from 'react-dom/client'; // Use ReactDOM to render React components to the DOM
 import '../../../resources/static/css/common/Layout.css';
-import '../../../resources/static/css/common/Login.css'; // 개별 CSS 스타일 적용
+import '../../../resources/static/css/common/Login.css'; // Apply individual CSS styles
 
 function Login() {
     const [id, setId] = useState('');
@@ -24,16 +24,16 @@ function Login() {
     }, []);
 
     const handleLogin = async (e) => {
-        e.preventDefault(); // 폼 제출 방지
+        e.preventDefault(); // Prevent form submission
 
-        const captchaToken = window.grecaptcha.getResponse(); // CAPTCHA 토큰 가져오기
+        const captchaToken = window.grecaptcha.getResponse(); // Get CAPTCHA token
         if (!captchaToken) {
-            setError('CAPTCHA를 풀어야 합니다.');
+            setError('You must complete the CAPTCHA.');
             return;
         }
 
         try {
-            console.log('Attempting login with:', { employeeId: id, employeePw: pw }); // 디버깅용 로그
+            console.log('Attempting login with:', { employeeId: id, employeePw: pw }); // Debug log
 
             const response = await fetch('/api/login', {
                 method: 'POST',
@@ -41,25 +41,25 @@ function Login() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ employeeId: id, employeePw: pw }),
-                credentials: 'include'  // 쿠키를 서버에 전송
+                credentials: 'include'  // Send cookies to server
             });
 
-            console.log('Response status:', response.status); // 디버깅용 로그
+            console.log('Response status:', response.status); // Debug log
 
             const result = await response.json();
 
             if (response.ok) {
-                console.log('Login successful:', result); // 디버깅용 로그
-                // 현재 시간 저장
+                console.log('Login successful:', result); // Debug log
+                // Save current login time
                 localStorage.setItem('loginTime', new Date().toLocaleString());
                 location.href = "/main";
             } else {
-                console.log('Login failed:', result); // 디버깅용 로그
-                setError(result.message || '로그인에 실패했습니다.');
+                console.log('Login failed:', result); // Debug log
+                setError(result.message || 'Login failed.');
             }
         } catch (err) {
-            console.error('로그인 중 오류 발생:', err);
-            setError('서버와의 연결에 실패했습니다.');
+            console.error('Error during login:', err);
+            setError('Failed to connect to the server.');
         }
     };
 
@@ -67,27 +67,27 @@ function Login() {
         <div className="login-container" style={{ backgroundImage: `url(/img/logo_background.jpg)` }}>
             <div className="login-box">
                 <div className="login-header">
-                    <img src="/img/logo3.png" alt="IKEA 로고" className="logo" />
-                    <h1>IKEA ERP 관리자 시스템</h1>
+                    <img src="/img/logo3.png" alt="IKEA Logo" className="logo" />
+                    <h1>IKEA ERP Admin System</h1>
                 </div>
                 <form className="login-form" onSubmit={handleLogin}>
                     <div className="input-group">
-                        <label htmlFor="id">아이디</label>
+                        <label htmlFor="id">ID</label>
                         <input
                             type="text"
                             id="id"
-                            placeholder="아이디를 입력하세요."
+                            placeholder="Enter your ID"
                             value={id}
                             onChange={(e) => setId(e.target.value)}
                             required
                         />
                     </div>
                     <div className="input-group">
-                        <label htmlFor="pw">비밀번호</label>
+                        <label htmlFor="pw">Password</label>
                         <input
                             type="password"
                             id="pw"
-                            placeholder="비밀번호를 입력하세요."
+                            placeholder="Enter your password"
                             value={pw}
                             onChange={(e) => setPw(e.target.value)}
                             required
@@ -99,11 +99,11 @@ function Login() {
                     <div className="recaptcha-container">
                         <div className="g-recaptcha" data-sitekey="6Lf6TlAqAAAAAD4ezvbWZJj2TGc8_WusXNm9D2f7"></div>
                     </div>
-                        <button type="submit" className="login-btn">로그인</button>
+                    <button type="submit" className="login-btn">Login</button>
                 </form>
                 <div className="login-footer">
-                    <a href="#">비밀번호 초기화</a> | <a href="#">2단계 인증 안내</a>
-                    <p>본 시스템은 IKEA의 자산으로 인가된 사용자만 접근 가능합니다.</p>
+                    <a href="#">Reset Password</a> | <a href="#">Two-Factor Authentication Info</a>
+                    <p>This system is IKEA property and only authorized users may access it.</p>
                     <p>COPYRIGHT © IKEA. ALL RIGHTS RESERVED.</p>
                 </div>
             </div>

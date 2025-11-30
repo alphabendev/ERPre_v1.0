@@ -1,109 +1,109 @@
 // src/main/react/components/common/CustomerSearchModal.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Pagination from './Pagination'; // 페이지네이션 컴포넌트 임포트
-import { useDebounce } from '../common/useDebounce'; // useDebounce 훅 임포트
+import Pagination from './Pagination'; // Import pagination component
+import { useDebounce } from '../common/useDebounce'; // Import useDebounce hook
 
 function CustomerSearchModal({ onClose, onCustomerSelect }) {
 
-    const [loading, setLoading] = useState(false); // 🔴 로딩 상태 추가
+    const [loading, setLoading] = useState(false); // 🔴 Loading state added
 
-    // 🔴 검색어 및 검색 결과 상태 관리
-    const [customerSearchText, setCustomerSearchText] = useState(''); // 고객사 검색어 상태
-    const debouncedCustomerSearchText = useDebounce(customerSearchText, 300); // 딜레이 적용
-    const [customerSearchResults, setCustomerSearchResults] = useState([]); // 고객사 검색 결과 상태
-    const [currentPage, setCurrentPage] = useState(1); // 현재 페이지 상태
+    // 🔴 Search term and search results state management
+    const [customerSearchText, setCustomerSearchText] = useState(''); // Customer search term state
+    const debouncedCustomerSearchText = useDebounce(customerSearchText, 300); // Apply delay
+    const [customerSearchResults, setCustomerSearchResults] = useState([]); // Customer search results state
+    const [currentPage, setCurrentPage] = useState(1); // Current page state
 
-    const itemsPerPage = 10; // 페이지당 항목 수
-    const totalPages = Math.ceil(customerSearchResults.length / itemsPerPage); // 전체 페이지 수 계산
-    const indexOfLastResult = currentPage * itemsPerPage; // 현재 페이지의 마지막 항목 인덱스
-    const indexOfFirstResult = indexOfLastResult - itemsPerPage; // 현재 페이지의 첫 번째 항목 인덱스
-    const paginatedCustomerSearchResults = customerSearchResults.slice(indexOfFirstResult, indexOfLastResult); // 페이지에 맞는 항목 추출
+    const itemsPerPage = 10; // Items per page
+    const totalPages = Math.ceil(customerSearchResults.length / itemsPerPage); // Calculate total pages
+    const indexOfLastResult = currentPage * itemsPerPage; // Last item index of current page
+    const indexOfFirstResult = indexOfLastResult - itemsPerPage; // First item index of current page
+    const paginatedCustomerSearchResults = customerSearchResults.slice(indexOfFirstResult, indexOfLastResult); // Extract items for current page
 
-    // 🔴 고객사 검색 처리 함수 (비동기)
+    // 🔴 Customer search processing function (async)
     const fetchData = async () => {
-        setLoading(true); // 로딩 시작
+        setLoading(true); // Start loading
         try {
-            // 검색 API 호출
+            // Search API call
             const response = await axios.get(`/api/customer/search`, {
                 params: {
-                    name: customerSearchText // 고객사 이름 필터
+                    name: customerSearchText // Customer name filter
                 }
             });
-            const data = response.data; // axios는 자동으로 JSON 응답을 변환
-            setCustomerSearchResults(data); // 검색 결과 상태 업데이트
-            setCurrentPage(1); // 검색 후 페이지를 첫 페이지로 초기화
-            setLoading(false); // 로딩 종료
+            const data = response.data; // axios automatically converts JSON response
+            setCustomerSearchResults(data); // Update search results state
+            setCurrentPage(1); // Reset to first page after search
+            setLoading(false); // End loading
         } catch (error) {
-            // 오류 처리
-            console.error('검색 중 오류 발생:', error);
-            setCustomerSearchResults([]); // 검색 결과 초기화
-            setLoading(false); // 에러 시 로딩 종료
+            // Error handling
+            console.error('Error occurred during search:', error);
+            setCustomerSearchResults([]); // Reset search results
+            setLoading(false); // End loading on error
         }
     };
 
-    // 🟡 컴포넌트가 처음 렌더링될 때 기본 검색 호출
+    // 🟡 Call initial search when component first renders
     useEffect(() => {
         fetchData();
-    }, []); // 빈 배열을 넣어 처음 렌더링 시 한 번만 실행
+    }, []); // Empty array ensures it runs only once on initial render
 
-    // 🟡 검색어가 디바운스된 후 fetchData 호출(고객사)
+    // 🟡 Call fetchData after search term is debounced (customer)
     useEffect(() => {
         fetchData();
     }, [debouncedCustomerSearchText]);
 
-    // 🟢 페이지 변경 처리 함수
+    // 🟢 Page change handling function
     const handlePage = (pageNumber) => {
-        setCurrentPage(pageNumber); // 페이지 번호 상태 업데이트
+        setCurrentPage(pageNumber); // Update page number state
     };
 
-    // 🟢 검색어 삭제 버튼 클릭 공통 함수
+    // 🟢 Common function for search term delete button click
     const handleSearchDel = (setSearch) => {
-        setSearch(''); // 공통적으로 상태를 ''로 설정
+        setSearch(''); // Common function to set state to ''
     };
 
-    // 🟢 검색어 변경(고객사)
+    // 🟢 Search term change (customer)
     const handleCustomerSearchTextChange = (event) => {
         setCustomerSearchText(event.target.value);
     };
 
-    // 🟢 모달 배경 클릭 시 창 닫기
+    // 🟢 Close window when modal background is clicked
     const handleBackgroundClick = (e) => {
         if (e.target.className === 'modal_overlay') {
             onClose();
         }
     };
 
-    // 🟢 검색된 고객사를 클릭
+    // 🟢 Click on searched customer
     const handleCustomerClick = (customer) => {
-        onCustomerSelect(customer); // 부모 컴포넌트에서 전달된 함수 호출 (handleCustomerSelect)
-        onClose(); // 모달 닫기
+        onCustomerSelect(customer); // Call function passed from parent component (handleCustomerSelect)
+        onClose(); // Close modal
     };
 
-    // 🟣 모달 렌더링
+    // 🟣 Modal rendering
     return (
         <div className="modal_overlay" onMouseDown={handleBackgroundClick}>
             <div className="modal_container search search_customer">
                 <div className="header">
-                    <div>고객사 검색</div>
-                    <button className="btn_close" onClick={onClose}><i className="bi bi-x-lg"></i></button> {/* 모달 닫기 버튼 */}
+                    <div>Customer Search</div>
+                    <button className="btn_close" onClick={onClose}><i className="bi bi-x-lg"></i></button> {/* Modal close button */}
                 </div>
                 <div className="search_wrap">
                     <div className={`search_box ${customerSearchText ? 'has_text' : ''}`}>
-                        <label className="label_floating">고객사</label>
+                        <label className="label_floating">Customer</label>
                         <i className="bi bi-search"></i>
                         <input
                             type="text"
                             className="box search"
                             value={customerSearchText}
                             onChange={handleCustomerSearchTextChange}
-                            style={{ width: '250px' }} // 인라인 스타일로 width 적용
+                            style={{ width: '250px' }} // Apply width via inline style
                         />
-                        {/* 검색어 삭제 버튼 */}
+                        {/* Search term delete button */}
                         {customerSearchText && (
                             <button
                                 className="btn-del"
-                                onClick={() => handleSearchDel(setCustomerSearchText)} // 공통 함수 사용
+                                onClick={() => handleSearchDel(setCustomerSearchText)} // Use common function
                             >
                                 <i className="bi bi-x"></i>
                             </button>
@@ -111,54 +111,54 @@ function CustomerSearchModal({ onClose, onCustomerSelect }) {
                     </div>
                 </div>
                 <div className="table_wrap">
-                    {/* 검색 결과가 있을 경우 목록을 출력 */}
+                    {/* Display list when search results exist */}
                     <table>
                         <thead>
-                            <tr>
-                                <th>고객사</th>
-                                <th>주소</th>
-                                <th>연락처</th>
-                                <th>대표명</th>
-                            </tr>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Address</th>
+                            <th>Contact</th>
+                            <th>Representative</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            {loading ? (
-                                <tr className="tr_empty">
-                                    <td colSpan="3"> {/* 로딩 애니메이션 중앙 배치 */}
-                                        <div className="loading">
-                                            <span></span> {/* 첫 번째 원 */}
-                                            <span></span> {/* 두 번째 원 */}
-                                            <span></span> {/* 세 번째 원 */}
-                                        </div>
-                                    </td>
+                        {loading ? (
+                            <tr className="tr_empty">
+                                <td colSpan="3"> {/* Center loading animation */}
+                                    <div className="loading">
+                                        <span></span> {/* First circle */}
+                                        <span></span> {/* Second circle */}
+                                        <span></span> {/* Third circle */}
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : customerSearchResults.length > 0 ? (
+                            /* Display searched customer list */
+                            paginatedCustomerSearchResults.map((result) => (
+                                <tr key={result.customerNo} onClick={() => handleCustomerClick(result)}>
+                                    <td>{result.customerName || '-'}</td> {/* Customer name */}
+                                    <td>{result.customerAddr || '-'}</td> {/* Customer address */}
+                                    <td>{result.customerTel || '-'}</td> {/* Customer contact */}
+                                    <td>{result.customerRepresentativeName || '-'}</td> {/* Representative name */}
                                 </tr>
-                            ) : customerSearchResults.length > 0 ? (
-                                /* 검색된 고객사 목록을 출력 */
-                                paginatedCustomerSearchResults.map((result) => (
-                                    <tr key={result.customerNo} onClick={() => handleCustomerClick(result)}>
-                                        <td>{result.customerName || '-'}</td> {/* 고객사 이름 */}
-                                        <td>{result.customerAddr || '-'}</td> {/* 고객사 주소 */}
-                                        <td>{result.customerTel || '-'}</td> {/* 고객사 연락처 */}
-                                        <td>{result.customerRepresentativeName || '-'}</td> {/* 대표 이름 */}
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr className="tr_empty">
-                                    <td colSpan="4">
-                                        <div className="no_data">조회된 결과가 없습니다.</div>
-                                    </td>
-                                </tr>
-                            )}
+                            ))
+                        ) : (
+                            <tr className="tr_empty">
+                                <td colSpan="4">
+                                    <div className="no_data">No results found.</div>
+                                </td>
+                            </tr>
+                        )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* 페이지네이션 컴포넌트 사용 */}
+                {/* Use pagination component */}
                 <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
                     handlePage={handlePage}
-                    showFilters={false} // 간단 버전으로 필터링 부분 숨기기
+                    showFilters={false} // Hide filtering section for simple version
                 />
             </div>
         </div>

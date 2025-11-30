@@ -2,57 +2,57 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
 const ConfirmCustom = () => {
-    const [isVisible, setIsVisible] = useState(false); // 모달이 화면에 표시되는지 여부를 관리하는 상태
-    const [message, setMessage] = useState(''); // 모달에 표시될 메시지를 저장하는 상태
-    const [resolveCallback, setResolveCallback] = useState(null); // Promise의 resolve 함수를 저장하여 나중에 호출할 수 있게 함
-    const [modalWidth, setModalWidth] = useState(null); // 모달의 width 값을 저장하는 상태
+    const [isVisible, setIsVisible] = useState(false); // State to track if the modal is visible
+    const [message, setMessage] = useState(''); // State to store the message displayed in the modal
+    const [resolveCallback, setResolveCallback] = useState(null); // Store the Promise's resolve function for later use
+    const [modalWidth, setModalWidth] = useState(null); // State to store modal width
 
-    // 🔴 confirmCustom 함수를 정의하여 모달을 표시하고, Promise로 처리
-    // 이 함수는 메시지와 width를 받아서 모달을 띄우고, 사용자의 선택에 따라 Promise가 resolve됨
+    // 🔴 Define confirmCustom function to show the modal and handle user choice via Promise
+    // This function takes a message and optional width, displays the modal, and resolves the Promise based on user action
     const confirmCustom = useCallback((message, width = null) => {
         return new Promise((resolve) => {
-            setMessage(message);    // 전달받은 메시지를 모달에 표시할 메시지로 설정
-            setModalWidth(width);   // width 값이 있으면 모달의 크기를 설정
-            setIsVisible(true);     // 모달을 화면에 표시
-            setResolveCallback(() => resolve);  // Promise의 resolve 함수를 저장하여 나중에 호출
+            setMessage(message);    // Set the provided message in the modal
+            setModalWidth(width);   // Set modal width if provided
+            setIsVisible(true);     // Show the modal
+            setResolveCallback(() => resolve);  // Store the Promise resolve function
         });
     }, []);
 
-    // 🟡 전역에서 confirmCustom 함수를 호출할 수 있도록 설정
-    // useEffect를 통해 confirmCustom 함수를 window 객체에 등록하여, 어디서든 호출할 수 있게 설정
+    // 🟡 Make confirmCustom globally accessible
+    // Register confirmCustom to the window object so it can be called from anywhere
     useEffect(() => {
-        window.confirmCustom = confirmCustom;  // confirmCustom 함수를 전역 함수로 설정
+        window.confirmCustom = confirmCustom;  // Assign confirmCustom to window
     }, [confirmCustom]);
 
-    // 🟡 '확인' 버튼 클릭 시 처리
-    // 사용자가 확인 버튼을 클릭했을 때 실행되는 함수로, 모달을 닫고 Promise를 resolve(true)로 처리
+    // 🟡 Handle 'Confirm' button click
+    // Closes the modal and resolves the Promise with true
     const handleConfirm = () => {
-        resolveCallback(true);  // Promise를 성공 상태로 완료하여 true 값을 반환
-        setIsVisible(false);    // 모달을 화면에서 숨김
+        resolveCallback(true);  // Resolve the Promise with true
+        setIsVisible(false);    // Hide the modal
     };
 
-    // 🟡 '취소' 버튼 클릭 시 처리
-    // 사용자가 취소 버튼을 클릭했을 때 실행되는 함수로, 모달을 닫고 Promise를 resolve(false)로 처리
+    // 🟡 Handle 'Cancel' button click
+    // Closes the modal and resolves the Promise with false
     const handleCancel = () => {
-        resolveCallback(false);  // Promise를 성공 상태로 완료하여 false 값을 반환
-        setIsVisible(false);     // 모달을 화면에서 숨김
+        resolveCallback(false); // Resolve the Promise with false
+        setIsVisible(false);    // Hide the modal
     };
 
-    // 모달이 보이지 않으면 null을 반환하여 아무것도 렌더링하지 않음
-    if (!isVisible) return null;  
+    // If modal is not visible, render nothing
+    if (!isVisible) return null;
 
-    // 🟢 화면: 모달이 보이는 경우 렌더링
+    // 🟢 Render modal when visible
     return (
         <div className="modal_overlay">
             <div className="modal_confirm" style={modalWidth ? { width: modalWidth } : {}}>
-                {/* 아이콘을 포함한 메시지 출력 영역 */}
+                {/* Message area with icon */}
                 <div className="icon_wrap"><i className="bi bi-exclamation-circle"></i></div>
-                {/* 메시지를 HTML로 출력. 외부로부터 받은 메시지가 포함될 때 XSS 공격 가능성에 주의 */}
+                {/* Render message as HTML. Be cautious of XSS if message contains external input */}
                 <p className='msg' dangerouslySetInnerHTML={{ __html: message }}></p>
-                {/* 확인 및 취소 버튼 */}
+                {/* Confirm and Cancel buttons */}
                 <div className="modal-actions">
-                    <button className="box red" onClick={handleConfirm}>확인</button>
-                    <button className="box gray" onClick={handleCancel}>취소</button>
+                    <button className="box red" onClick={handleConfirm}>Confirm</button>
+                    <button className="box gray" onClick={handleCancel}>Cancel</button>
                 </div>
             </div>
         </div>

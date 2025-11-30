@@ -1,113 +1,113 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Pagination from './Pagination'; // 페이지네이션 컴포넌트 임포트
+import Pagination from './Pagination'; // Import pagination component
 
-function ProductSearchModal({ onClose, onProductSelect, customerNo = null }) { // 가격 등록 시 -> 단순 상품 검색, 주문 등록 시 -> 고객사에 해당하는 상품 검색(customerNo)
+function ProductSearchModal({ onClose, onProductSelect, customerNo = null }) { // For price registration -> simple product search, For order registration -> search products for specific customer (customerNo)
 
-    const [loading, setLoading] = useState(false); // 🔴 로딩 상태 추가
+    const [loading, setLoading] = useState(false); // 🔴 Loading state added
 
-    // 🔴 검색어 상태 관리
-    const [searchName, setSearchName] = useState(''); // 상품명 검색어
-    const [searchCode, setSearchCode] = useState('');   // 상품코드 검색어
-    const [searchResults, setSearchResults] = useState([]); // 검색 결과 배열 상태
-    const [currentPage, setCurrentPage] = useState(1); // 현재 페이지 상태
-    const [totalPages, setTotalPages] = useState(0); // 전체 페이지 수 상태
+    // 🔴 Search term state management
+    const [searchName, setSearchName] = useState(''); // Product name search term
+    const [searchCode, setSearchCode] = useState('');   // Product code search term
+    const [searchResults, setSearchResults] = useState([]); // Search results array state
+    const [currentPage, setCurrentPage] = useState(1); // Current page state
+    const [totalPages, setTotalPages] = useState(0); // Total pages state
 
-    const itemsPerPage = 10; // 페이지당 표시할 항목 수
+    const itemsPerPage = 10; // Number of items to display per page
 
-    // 🔴 모든 카테고리 상태
+    // 🔴 All category states
     const [allCategories, setAllCategories] = useState([]);
     const [topCategories, setTopCategories] = useState([]);
     const [middleCategories, setMiddleCategories] = useState([]);
     const [lowCategories, setLowCategories] = useState([]);
 
-    // 🔴 선택한 카테고리
+    // 🔴 Selected categories
     const [selectedCategory, setSelectedCategory] = useState({
         top: '',
         middle: '',
         low: ''
     });
 
-    // 🔴 상품 조회 함수
+    // 🔴 Product fetch function
     const fetchProducts = () => {
-        setLoading(true); // 로딩 시작
+        setLoading(true); // Start loading
 
-        // API 요청에 전달할 파라미터 객체 생성
+        // Create parameter object for API request
         const params = {
             page: currentPage,
             size: itemsPerPage,
-            topCategoryNo: selectedCategory.top || null,    // 대분류 카테고리
-            middleCategoryNo: selectedCategory.middle || null, // 중분류 카테고리
-            lowCategoryNo: selectedCategory.low || null,    // 소분류 카테고리
-            productCd: searchCode || null,                  // 상품 코드 필터
-            productNm: searchName || null,                 // 상품명 필터
-            status: 'active',                              // 활성화된 상품만 조회
+            topCategoryNo: selectedCategory.top || null,    // Top category
+            middleCategoryNo: selectedCategory.middle || null, // Middle category
+            lowCategoryNo: selectedCategory.low || null,    // Low category
+            productCd: searchCode || null,                  // Product code filter
+            productNm: searchName || null,                 // Product name filter
+            status: 'active',                              // Only fetch active products
         };
 
-        // 🔴 customerNo가 있을 경우에만 추가
+        // 🔴 Add only if customerNo exists
         if (customerNo) {
             params.customerNo = customerNo;
         }
 
         axios.get('/api/products/productsFilter', { params })
             .then((response) => {
-                const data = response.data.content || []; // 서버 응답에서 상품 목록 추출
-                console.log("검색 결과:", data);
-                setSearchResults(data); // 검색 결과 상태 업데이트
-                setTotalPages(response.data.totalPages || 0); // 전체 페이지 수 설정
-                setLoading(false); // 로딩 종료
+                const data = response.data.content || []; // Extract product list from server response
+                console.log("Search results:", data);
+                setSearchResults(data); // Update search results state
+                setTotalPages(response.data.totalPages || 0); // Set total pages
+                setLoading(false); // End loading
             })
             .catch((error) => {
-                console.error('상품 목록 조회 실패', error);
-                setLoading(false); // 에러 시 로딩 종료
+                console.error('Failed to fetch product list', error);
+                setLoading(false); // End loading on error
             });
     };
 
 
-    // 🟡 컴포넌트 마운트 시 모든 카테고리 가져오기
+    // 🟡 Fetch all categories when component mounts
     useEffect(() => {
         const fetchAllCategories = async () => {
             try {
                 const response = await axios.get('/api/category/all');
                 const categories = response.data;
-                console.log("전체 카테고리 데이터:", categories);
+                console.log("All category data:", categories);
 
                 setAllCategories(categories);
 
-                // 대분류 분류
+                // Classify top categories
                 const top = categories.filter(cat => !cat.parentCategoryNo);
                 setTopCategories(top);
-                console.log("대분류:", top);
+                console.log("Top categories:", top);
 
-                // 중분류 분류
+                // Classify middle categories
                 const middle = categories.filter(cat => cat.parentCategoryNo && top.some(topCat => topCat.categoryNo === cat.parentCategoryNo));
                 setMiddleCategories(middle);
-                console.log("중분류:", middle);
+                console.log("Middle categories:", middle);
 
-                // 소분류 분류
+                // Classify low categories
                 const low = categories.filter(cat => {
                     const middleCat = middle.find(m => m.categoryNo === cat.parentCategoryNo);
                     return middleCat && top.some(topCat => topCat.categoryNo === middleCat.parentCategoryNo);
                 });
                 setLowCategories(low);
-                console.log("소분류:", low);
+                console.log("Low categories:", low);
 
             } catch (error) {
-                console.error('모든 카테고리 가져오기 실패:', error);
+                console.error('Failed to fetch all categories:', error);
             }
         };
 
         fetchAllCategories();
-    }, []); // 빈 의존성 배열로 한 번만 실행
+    }, []); // Run only once with empty dependency array
 
-    // 🟡 대분류 변경 시 중분류 필터링
+    // 🟡 Filter middle categories when top category changes
     useEffect(() => {
-        console.log("대분류 변경 시 selectedCategory.top:", selectedCategory.top);
+        console.log("selectedCategory.top when top category changes:", selectedCategory.top);
         if (selectedCategory.top) {
-            // selectedCategory.top을 숫자로 변환
+            // Convert selectedCategory.top to number
             const topValue = Number(selectedCategory.top);
             const filteredMiddle = allCategories.filter(cat => cat.parentCategoryNo === topValue);
-            console.log("필터링된 중분류:", filteredMiddle);
+            console.log("Filtered middle categories:", filteredMiddle);
             setMiddleCategories(filteredMiddle);
         } else {
             setMiddleCategories([]);
@@ -116,17 +116,17 @@ function ProductSearchModal({ onClose, onProductSelect, customerNo = null }) { /
             if (prev.middle !== '' || prev.low !== '') {
                 return { ...prev, middle: '', low: '' };
             }
-            return prev; // 값이 동일하면 상태 업데이트 없음
+            return prev; // No state update if values are the same
         });
         setLowCategories([]);
     }, [selectedCategory.top, allCategories]);
 
-    // 🟡 중분류 변경 시 소분류 필터링
+    // 🟡 Filter low categories when middle category changes
     useEffect(() => {
         if (selectedCategory.middle) {
             const middleValue = Number(selectedCategory.middle);
             const filteredLow = allCategories.filter(cat => cat.parentCategoryNo === middleValue);
-            console.log("필터링된 소분류:", filteredLow);
+            console.log("Filtered low categories:", filteredLow);
             setLowCategories(filteredLow);
         } else {
             setLowCategories([]);
@@ -139,26 +139,26 @@ function ProductSearchModal({ onClose, onProductSelect, customerNo = null }) { /
         });
     }, [selectedCategory.middle, allCategories]);
 
-    // 🟡 검색 조건이나 페이지가 변경될 때마다 상품 조회
+    // 🟡 Fetch products whenever search conditions or page changes
     useEffect(() => {
-        let isMounted = true; // 컴포넌트가 마운트된 상태인지 확인하는 변수
+        let isMounted = true; // Variable to check if component is mounted
         if (isMounted) {
-            fetchProducts(); // 상태가 변경될 때만 실행
+            fetchProducts(); // Execute only when state changes
         }
         return () => {
-            isMounted = false; // 컴포넌트 언마운트 시 API 호출 중단
+            isMounted = false; // Stop API call when component unmounts
         };
     }, [searchCode, searchName, selectedCategory, currentPage]);
 
-    // 🟢 페이지 변경 처리 함수
+    // 🟢 Page change handling function
     const handlePage = (pageNumber) => {
-        setCurrentPage(pageNumber); // 페이지 번호 상태 업데이트
+        setCurrentPage(pageNumber); // Update page number state
     };
 
-    // 🟢 대분류 변경 처리 함수
+    // 🟢 Top category change handling function
     const handleTopChange = (e) => {
         const topValue = e.target.value;
-        console.log("handleTopChange - 선택된 대분류:", topValue);
+        console.log("handleTopChange - selected top category:", topValue);
         setSelectedCategory({
             top: topValue,
             middle: '',
@@ -168,10 +168,10 @@ function ProductSearchModal({ onClose, onProductSelect, customerNo = null }) { /
         setLowCategories([]);
     };
 
-    // 🟢 중분류 변경 처리 함수
+    // 🟢 Middle category change handling function
     const handleMiddleChange = (e) => {
         const middleValue = e.target.value;
-        console.log("handleMiddleChange - 선택된 중분류:", middleValue);
+        console.log("handleMiddleChange - selected middle category:", middleValue);
         setSelectedCategory(prev => ({
             ...prev,
             middle: middleValue,
@@ -180,90 +180,90 @@ function ProductSearchModal({ onClose, onProductSelect, customerNo = null }) { /
         setLowCategories([]);
     };
 
-    // 🟢 소분류 변경 처리 함수
+    // 🟢 Low category change handling function
     const handleLowChange = (e) => {
         const lowValue = e.target.value;
-        console.log("handleLowChange - 선택된 소분류:", lowValue);
+        console.log("handleLowChange - selected low category:", lowValue);
         setSelectedCategory(prev => ({
             ...prev,
             low: lowValue
         }));
     };
 
-    // 🟢 검색어 삭제 버튼 클릭 공통 함수
+    // 🟢 Common function for search term delete button click
     const handleSearchDel = (setSearch) => {
-        setSearch(''); // 공통적으로 상태를 ''로 설정
+        setSearch(''); // Common function to set state to ''
     };
 
-    // 🟢 모달 배경 클릭 시 창 닫기
+    // 🟢 Close window when modal background is clicked
     const handleBackgroundClick = (e) => {
         if (e.target.className === 'modal_overlay') {
             onClose();
         }
     };
 
-    // 🟣 모달 렌더링
+    // 🟣 Modal rendering
     return (
         <div className="modal_overlay" onMouseDown={handleBackgroundClick}>
             <div className="modal_container search search_product">
                 <div className="header">
-                    <div>상품 검색</div>
-                    <button className="btn_close" onClick={onClose}><i className="bi bi-x-lg"></i></button> {/* 모달 닫기 버튼 */}
+                    <div>Product Search</div>
+                    <button className="btn_close" onClick={onClose}><i className="bi bi-x-lg"></i></button> {/* Modal close button */}
                 </div>
                 <div className="search_wrap">
-                    {/* 대분류 셀렉터 */}
+                    {/* Top category selector */}
                     <div className={`select_box ${selectedCategory.top ? 'selected' : ''}`} >
-                        <label className="label_floating">대분류</label>
+                        <label className="label_floating">Top Category</label>
                         <select
                             className="box" value={selectedCategory.top} onChange={handleTopChange}>
-                            <option value="">대분류</option>
+                            <option value="">Top Category</option>
                             {topCategories.map(category => (
                                 <option key={category.categoryNo}
-                                    value={category.categoryNo}>{category.categoryNm}</option>
+                                        value={category.categoryNo}>{category.categoryNm}</option>
                             ))}
                         </select>
                     </div>
 
-                    {/* 중분류 셀렉터 */}
+                    {/* Middle category selector */}
                     <div className={`select_box ${selectedCategory.middle ? 'selected' : ''}`} >
-                        <label className="label_floating">중분류</label>
+                        <label className="label_floating">Middle Category</label>
                         <select
                             className="box" value={selectedCategory.middle} onChange={handleMiddleChange}
                             disabled={!selectedCategory.top}>
-                            <option value="">중분류</option>
+                            <option value="">Middle Category</option>
                             {middleCategories.map(category => (
                                 <option key={category.categoryNo}
-                                    value={category.categoryNo}>{category.categoryNm}</option>
+                                        value={category.categoryNo}>{category.categoryNm}</option>
                             ))}
                         </select>
                     </div>
 
-                    {/* 소분류 셀렉터 */}
+                    {/* Low category selector */}
                     <div className={`select_box ${selectedCategory.low ? 'selected' : ''}`} >
-                        <label className="label_floating">소분류</label>
+                        <label className="label_floating">Low Category</label>
                         <select
                             className="box" value={selectedCategory.low} onChange={handleLowChange}
                             disabled={!selectedCategory.middle}>
-                            <option value="">소분류</option>
+                            <option value="">Low Category</option>
                             {lowCategories.map(category => (
                                 <option key={category.categoryNo}
-                                    value={category.categoryNo}>{category.categoryNm}</option>
+                                        value={category.categoryNo}>{category.categoryNm}</option>
                             ))}
                         </select>
                     </div>
                 </div>
 
-                {/* 검색어 입력란 */}
+                {/* Search term input fields */}
                 <div className="search_wrap" style={{ marginTop: '5px' }}>
-                    {/* 상품명 검색 */}
+                    {/* Product name search */}
                     <div className={`search_box ${searchName ? 'has_text' : ''}`}>
-                        <label className="label_floating">상품명</label>
+                        <label className="label_floating">Product Name</label>
                         <i className="bi bi-search"></i>
                         <input
                             type="text"
                             className="box"
-                            value={searchName} // 상품명 검색어 상태값 연결
-                            onChange={(e) => setSearchName(e.target.value)} // 상품명 검색어 변경 처리
+                            value={searchName} // Connect to product name search term state
+                            onChange={(e) => setSearchName(e.target.value)} // Handle product name search term change
                         />
                         {searchName && (
                             <button className="btn-del" onClick={() => handleSearchDel(setSearchName)}>
@@ -272,15 +272,15 @@ function ProductSearchModal({ onClose, onProductSelect, customerNo = null }) { /
                         )}
                     </div>
 
-                    {/* 상품코드 검색 */}
+                    {/* Product code search */}
                     <div className={`search_box ${searchCode ? 'has_text' : ''}`}>
-                        <label className="label_floating">상품코드</label>
+                        <label className="label_floating">Product Code</label>
                         <i className="bi bi-search"></i>
                         <input
                             type="text"
                             className="box"
-                            value={searchCode} // 상품코드 검색어 상태값 연결
-                            onChange={(e) => setSearchCode(e.target.value)} // 상품코드 검색어 변경 처리
+                            value={searchCode} // Connect to product code search term state
+                            onChange={(e) => setSearchCode(e.target.value)} // Handle product code search term change
                         />
                         {searchCode && (
                             <button className="btn-del" onClick={() => handleSearchDel(setSearchCode)}>
@@ -290,69 +290,69 @@ function ProductSearchModal({ onClose, onProductSelect, customerNo = null }) { /
                     </div>
                 </div>
 
-                {/* 검색 결과 테이블 */}
+                {/* Search results table */}
                 <div className="table_wrap">
                     <table>
                         <thead>
-                            <tr>
-                                <th>상품코드</th>
-                                <th>카테고리</th>
-                                <th>상품명</th>
-                                <th>가격</th>
-                            </tr>
+                        <tr>
+                            <th>Product Code</th>
+                            <th>Category</th>
+                            <th>Product Name</th>
+                            <th>Price</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            {loading ? (
-                                <tr className="tr_empty">
-                                    <td colSpan="4"> {/* 로딩 애니메이션 중앙 배치 */}
-                                        <div className="loading">
-                                            <span></span> {/* 첫 번째 원 */}
-                                            <span></span> {/* 두 번째 원 */}
-                                            <span></span> {/* 세 번째 원 */}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : searchResults.length > 0 ? (
-                                searchResults.map((result, index) => (
-                                    <tr key={index} onClick={() => onProductSelect(result)}>
-                                        <td>{result.productCd || '-'}</td> {/* 상품 코드 */}
-                                        <td>{result.lowCategory}</td> {/* 상품 카테고리 */}
-                                        <td>{result.productNm || '-'}</td> {/* 상품명 */}
-                                        <td>
-                                            {/* 고객사 별 상품 가격 또는 상품 가격(기준가) */}
-                                            {customerNo ? (
-                                                result.priceCustomer ? (
-                                                    `${result.priceCustomer.toLocaleString()}원`
-                                                ) : (
-                                                    '-'
-                                                )
+                        {loading ? (
+                            <tr className="tr_empty">
+                                <td colSpan="4"> {/* Center loading animation */}
+                                    <div className="loading">
+                                        <span></span> {/* First circle */}
+                                        <span></span> {/* Second circle */}
+                                        <span></span> {/* Third circle */}
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : searchResults.length > 0 ? (
+                            searchResults.map((result, index) => (
+                                <tr key={index} onClick={() => onProductSelect(result)}>
+                                    <td>{result.productCd || '-'}</td> {/* Product code */}
+                                    <td>{result.lowCategory}</td> {/* Product category */}
+                                    <td>{result.productNm || '-'}</td> {/* Product name */}
+                                    <td>
+                                        {/* Customer-specific product price or product price (base price) */}
+                                        {customerNo ? (
+                                            result.priceCustomer ? (
+                                                `${result.priceCustomer.toLocaleString()}원`
                                             ) : (
-                                                result.productPrice ? (
-                                                    `${result.productPrice.toLocaleString()}원`
-                                                ) : (
-                                                    '-'
-                                                )
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr className="tr_empty">
-                                    <td colSpan="4">
-                                        <div className="no_data">조회된 결과가 없습니다.</div>
+                                                '-'
+                                            )
+                                        ) : (
+                                            result.productPrice ? (
+                                                `${result.productPrice.toLocaleString()}원`
+                                            ) : (
+                                                '-'
+                                            )
+                                        )}
                                     </td>
                                 </tr>
-                            )}
+                            ))
+                        ) : (
+                            <tr className="tr_empty">
+                                <td colSpan="4">
+                                    <div className="no_data">No results found.</div>
+                                </td>
+                            </tr>
+                        )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* 페이지네이션 컴포넌트 */}
+                {/* Pagination component */}
                 <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
                     handlePage={handlePage}
-                    showFilters={false} // 간단 버전으로 필터링 부분 숨기기
+                    showFilters={false} // Hide filtering section for simple version
                 />
             </div>
         </div>
