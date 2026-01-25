@@ -22,6 +22,6 @@ public class EmployeeDTO {
     private String employeeRole;
     private Timestamp employeeInsertDate;
     private Timestamp employeeUpdateDate;
-    private String employeeDeleteYn; // 삭제 여부 기본값 'N'
-    private Timestamp employeeDeleteDate; // 삭제 일시
+    private String employeeDeleteYn; // Default value 'N' indicates deletion status
+    private Timestamp employeeDeleteDate; // Deletion timestamp
 }

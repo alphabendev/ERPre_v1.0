@@ -17,22 +17,19 @@ public class CategoryDTO {
     private String categoryNm;
     private Timestamp categoryInsertDate;
     private Timestamp categoryUpdateDate;
-    private String categoryDeleteYn; // 삭제 여부 기본값 'N'
-    private Timestamp categoryDeleteDate; // 삭제 일시
+    private String categoryDeleteYn; // Default value 'N' indicates deletion status
+    private Timestamp categoryDeleteDate; // Deletion timestamp
 
-    private Integer one; // 대분류 번호
-    private Integer two; // 중분류 번호
-    private Integer three; // 소분류 번호
-    private String paths; // 전체 경로
+    private Integer one; // Top-level category number
+    private Integer two; // Mid-level category number
+    private Integer three; // Low-level category number
+    private String paths; // Full category path
 
-    // 추가
+    // Additional fields
     private Integer topCategoryNo;
     private Integer middleCategoryNo;
     private Integer lowCategoryNo;
     private Integer categoryLv;
-
-
-
 
     public CategoryDTO(Integer one, Integer two, Integer three, Integer categoryNo, Integer categoryLevel, String paths, Timestamp categoryInsertDate, Timestamp categoryUpdateDate) {
         this.one = one;
@@ -45,7 +42,7 @@ public class CategoryDTO {
         this.categoryUpdateDate = categoryUpdateDate;
     }
 
-    // 카테고리 조회 생성자
+    // Constructor for category lookup
     public CategoryDTO(Integer topCategoryNo, Integer middleCategoryNo, Integer lowCategoryNo) {
         this.topCategoryNo = topCategoryNo;
         this.middleCategoryNo = middleCategoryNo;

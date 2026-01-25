@@ -16,74 +16,74 @@ import java.util.Map;
 @RequestMapping("/api/customer")
 public class CustomerController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CustomerController.class); // Logger 선언
+    private static final Logger logger = LoggerFactory.getLogger(CustomerController.class); // Logger declaration
 
     @Autowired
     private CustomerService customerService;
 
-    // 전체 고객 목록 조회
+    // Retrieve full customer list
     @GetMapping("/getList")
     public List<Customer> getList() {
-        logger.info("전체 고객 목록 조회");
+        logger.info("Retrieve full customer list");
         return customerService.getList();
     }
 
-    // 전체 고객사, 삭제된 고객사 목록 조회
-    @GetMapping("/getListByDeleteYn") //경로 수정 (중복 제거)
+    // Retrieve all customers and deleted customers list
+    @GetMapping("/getListByDeleteYn") // Path modified (duplicate removed)
     public ResponseEntity<List<Customer>> getCustomers(@RequestParam(required = false) String deleteYn) {
         List<Customer> customers = customerService.getCustomersByDeleteYn(deleteYn);
         return ResponseEntity.ok(customers);
     }
 
-    // 고객 정보 등록
+    // Register customer information
     @PostMapping("/register")
     public Customer insertCustomer(@RequestBody Customer customer) {
-        logger.info("고객 등록");
+        logger.info("Register customer");
         return customerService.insertCustomer(customer);
     }
 
-    // 고객 정보 수정
+    // Update customer information
     @PutMapping("/update/{customerNo}")
     public Customer updateCustomer(@PathVariable Integer customerNo, @RequestBody Customer updatedCustomer) {
-        logger.info("고객 정보 수정");
+        logger.info("Update customer information");
         return customerService.updateCustomer(customerNo, updatedCustomer);
     }
 
-    // 고객 삭제
+    // Delete customer
     @DeleteMapping("/delete/{customerNo}")
     public void deleteCustomer(@PathVariable Integer customerNo) {
-        logger.info("고객 삭제: customerNo=" + customerNo);
+        logger.info("Delete customer: customerNo=" + customerNo);
         customerService.deleteCustomer(customerNo);
     }
 
-    //고객 이름 검색
+    // Search customer by name
     @GetMapping("/search")
     public List<Customer> searchCustomers(@RequestParam("name") String name) {
         return customerService.searchCustomers(name);
     }
 
-    // 메인 - 총 고객사 수
+    // Main - total number of customers
     @GetMapping("/count")
     public ResponseEntity<Long> getTotalCustomer() {
         Long count = customerService.getTotalCustomer();
         return ResponseEntity.ok(count);
     }
 
-    // 메인 - 최근 신규 고객(등록일시가 오늘부터 3일전 까지)
+    // Main - recent new customers (registered from today up to 3 days ago)
     @GetMapping("/recent")
     public ResponseEntity<List<Customer>> getRecentCustomer() {
         List<Customer> recentCustomer = customerService.getRecentCustomer();
         return ResponseEntity.ok(recentCustomer);
     }
 
-    // 메인 - 계약 갱신 예정(거래종료일시가 오늘 기준 3일 남은 것)
+    // Main - upcoming contract renewals (customers with transaction end date 3 days from today)
     @GetMapping("/renewals")
     public ResponseEntity<List<Customer>> getRenewalCustomer() {
         List<Customer> renewalCustomer = customerService.getRenewalCustomer();
         return ResponseEntity.ok(renewalCustomer);
     }
 
-    //유효성검사
+    // Validation check
     @PostMapping("/checkDuplicate")
     public ResponseEntity<Map<String, Boolean>> checkDuplicate(@RequestBody Map<String, String> requestData) {
         String customerName = requestData.get("customerName");

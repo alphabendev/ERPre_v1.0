@@ -36,7 +36,7 @@ public class MainController {
         } else if ("login".equals(pageName) && employee == null) {
             return "login";
         }
-        // 페이지가 로그인 또는 메인 페이지가 아닌 경우에 대해 처리
+        // Handle cases where the page is neither the login page nor the main page
         return "view";
     }
 }

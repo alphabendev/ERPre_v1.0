@@ -26,61 +26,68 @@ public class EmployeeController {
     @Autowired
     private EmployeeService employeeService;
 
-    // 로그인 엔드포인트
+    // Login endpoint
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest, HttpSession session) {
         String employeeId = loginRequest.get("employeeId");
         String employeePw = loginRequest.get("employeePw");
 
-        // 리캡차 응답을 받지만 검증하지 않음
+        // Receive reCAPTCHA response but do not validate it
         String recaptchaResponse = loginRequest.get("recaptchaResponse");
-        // 아이디와 비밀번호 검증
-        Employee employee = employeeRepository.findByEmployeeIdAndEmployeePw(employeeId, employeePw).orElse(null);
+
+        // Validate ID and password
+        Employee employee = employeeRepository
+                .findByEmployeeIdAndEmployeePw(employeeId, employeePw)
+                .orElse(null);
 
         if (employee != null) {
             session.setAttribute("employee", employee);
 
-            // 로그인 성공 시 사용자 정보와 함께 응답
+            // Respond with user information on successful login
             Map<String, Object> response = new HashMap<>();
-            response.put("message", "로그인 성공");
-            response.put("employee", employee); // 사용자 정보 포함
+            response.put("message", "Login successful");
+            response.put("employee", employee); // Include user information
 
             return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "아이디 또는 비밀번호가 올바르지 않습니다."));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "The ID or password is incorrect."));
         }
     }
 
-    // 로그아웃 엔드포인트
+    // Logout endpoint
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpSession session) {
-        session.invalidate(); // 세션 무효화
-        return ResponseEntity.ok().build(); // 성공적으로 로그아웃
+        session.invalidate(); // Invalidate session
+        return ResponseEntity.ok().build(); // Successfully logged out
     }
 
-    // 현재 로그인한 직원 정보 조회
+    // Retrieve currently logged-in employee information
     @GetMapping("/employee")
     public ResponseEntity<Employee> getEmployee(HttpSession session) {
         Employee employee = (Employee) session.getAttribute("employee");
         if (employee != null) {
             return ResponseEntity.ok(employee);
         } else {
-//            개발중 임시 코드(admin 기본 로그인)
-//            Employee employeeTmp = employeeRepository.findByEmployeeIdAndEmployeePw("admin", "admin").orElse(null);
-//            session.setAttribute("employee", employeeTmp);
-//            return ResponseEntity.ok(employeeTmp);
+            // Temporary code for development (default admin login)
+            // Employee employeeTmp = employeeRepository
+            //         .findByEmployeeIdAndEmployeePw("admin", "admin")
+            //         .orElse(null);
+            // session.setAttribute("employee", employeeTmp);
+            // return ResponseEntity.ok(employeeTmp);
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 
-    // 전체 직원 목록 조회
-//    @GetMapping("/employeeList")
-//    public ResponseEntity<List<Employee>> getAllEmployees() {
-//        List<Employee> employeeList = employeeService.getAllEmployees();
-//        return ResponseEntity.ok(employeeList);
-//    }
+    // Retrieve full employee list
+    // @GetMapping("/employeeList")
+    // public ResponseEntity<List<Employee>> getAllEmployees() {
+    //     List<Employee> employeeList = employeeService.getAllEmployees();
+    //     return ResponseEntity.ok(employeeList);
+    // }
 
-    //페이징해서 재직중인 직원 목록 보여주기
+    // Show paginated list of currently employed employees
     @GetMapping("/employeeList")
     public ResponseEntity<Page<Employee>> getAllEmployees(
             @RequestParam(defaultValue = "1") int page,
@@ -89,7 +96,7 @@ public class EmployeeController {
         return ResponseEntity.ok(employeePage);
     }
 
-    //페이징해서 퇴직자만
+    // Paginated list of resigned employees only
     @GetMapping("/employeeListY")
     public ResponseEntity<Page<Employee>> getAllEmployeesY(
             @RequestParam(defaultValue = "1") int page,
@@ -98,14 +105,14 @@ public class EmployeeController {
         return ResponseEntity.ok(employeePage);
     }
 
-    //직원목록화면에서 체크된 직원 logical 삭제
+    // Logical deletion of selected employees from employee list screen
     @PostMapping("/deleteEmployees")
     public ResponseEntity<?> deleteEmployees(@RequestBody List<String> ids) {
         employeeService.deleteLogicalEmployees(ids);
         return ResponseEntity.ok("Employees deleted successfully");
     }
 
-    //퇴직자까지 보기(전체직원보기)
+    // View all employees including resigned employees
     @GetMapping("/allEmployees")
     public ResponseEntity<Page<Employee>> getAllEmployeesWithResigned(
             @RequestParam(defaultValue = "1") int page,
@@ -114,38 +121,41 @@ public class EmployeeController {
         return ResponseEntity.ok(employeePage);
     }
 
-    //모달에서 신규직원 등록
+    // Register a new employee from modal
     @PostMapping("/registerEmployee")
     public ResponseEntity<String> registerEmployee(@RequestBody EmployeeDTO employeeDTO) {
         if (employeeService.existsByEmployeeId(employeeDTO.getEmployeeId())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 존재하는 아이디입니다.");
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("This ID already exists.");
         }
         employeeService.registerEmployee(employeeDTO);
-        return ResponseEntity.ok("직원이 성공적으로 등록되었습니다.");
+        return ResponseEntity.ok("Employee registered successfully.");
     }
 
-    // 직원 정보 수정
+    // Update employee information
     @PutMapping("/updateEmployee/{employeeId}")
-    public ResponseEntity<String> updateEmployee(@PathVariable String employeeId, @RequestBody EmployeeDTO employeeDTO) {
+    public ResponseEntity<String> updateEmployee(
+            @PathVariable String employeeId,
+            @RequestBody EmployeeDTO employeeDTO) {
         employeeService.updateEmployee(employeeId, employeeDTO);
-        return ResponseEntity.ok("직원 정보가 성공적으로 수정되었습니다.");
+        return ResponseEntity.ok("Employee information updated successfully.");
     }
 
-    // 수정모달에서 직원 삭제
+    // Delete employee from edit modal (logical delete)
     @PutMapping("/deleteEmployee/{employeeId}")
     public ResponseEntity<String> deleteEmployee(@PathVariable String employeeId) {
         employeeService.deleteLogicalEmployee(employeeId);
-        return ResponseEntity.ok("직원이 논리적으로 삭제되었습니다.");
+        return ResponseEntity.ok("Employee logically deleted.");
     }
 
-    // 중복ID체크
+    // Duplicate ID check
     @GetMapping("/checkEmployeeId")
     public ResponseEntity<Boolean> checkEmployeeId(@RequestParam String employeeId) {
         boolean exists = employeeService.existsByEmployeeId(employeeId);
         return ResponseEntity.ok(exists);
     }
 
-    // 전체 직원 수를 반환하는 API
+    // API to return total employee count
     @GetMapping("/employeeCount")
     public long getTotalEmployeeCount() {
         return employeeService.getTotalEmployeeCount();
@@ -154,11 +164,11 @@ public class EmployeeController {
     @GetMapping("/employeeRecentCount")
     public ResponseEntity<Long> getRecentHiresCount() {
         try {
-            int days = 30; // 최근 30일
-            long recentHiresCount = employeeService.getRecentHiresCount(days); // 서비스 호출
-            return ResponseEntity.ok(recentHiresCount); // 성공적으로 직원 수 반환
+            int days = 30; // Last 30 days
+            long recentHiresCount = employeeService.getRecentHiresCount(days); // Call service
+            return ResponseEntity.ok(recentHiresCount); // Successfully return count
         } catch (Exception e) {
-            // 예외가 발생한 경우 500 오류와 함께 null 응답
+            // If an exception occurs, return 500 error with null response
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
@@ -167,6 +177,4 @@ public class EmployeeController {
     public long getCountOfDeletedEmployeesLast30Days() {
         return employeeService.countDeletedEmployeesLast30Days();
     }
-
-
 }

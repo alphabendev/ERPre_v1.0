@@ -19,25 +19,26 @@ public class OrderReportController {
     @Autowired
     private OrderReportService orderReportService;
 
-    // 🔴 총 주문금액 조회 메서드
-    // 이 메서드는 클라이언트로부터 시작 날짜(startDate), 종료 날짜(endDate), 기간 타입(periodType)을 파라미터로 받아
-    // 해당 기간 동안의 주문 금액을 집계하여 반환합니다.
+    // 🔴 Total order amount retrieval method
+    // This method receives start date (startDate), end date (endDate),
+    // and period type (periodType) from the client,
+    // and returns the aggregated order amounts for the specified period.
     @GetMapping("/orders")
     public List<Object[]> getOrders(@RequestParam String startDate,
                                     @RequestParam String endDate,
                                     @RequestParam String periodType) {
-        // 날짜 형식을 yyyy-MM-dd로 맞추기 위한 포매터
+        // Formatter to match date format yyyy-MM-dd
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-        // 입력받은 문자열을 LocalDate 객체로 변환
+        // Convert input strings to LocalDate objects
         LocalDate start = LocalDate.parse(startDate, formatter);
         LocalDate end = LocalDate.parse(endDate, formatter);
 
-        // LocalDate 객체를 LocalDateTime 객체로 변환하여 시작과 끝 시간을 지정
-        LocalDateTime startDateTime = start.atStartOfDay(); // 시작 날짜는 00:00:00
-        LocalDateTime endDateTime = end.atTime(23, 59, 59); // 종료 날짜는 23:59:59
+        // Convert LocalDate to LocalDateTime and set start and end times
+        LocalDateTime startDateTime = start.atStartOfDay(); // Start date at 00:00:00
+        LocalDateTime endDateTime = end.atTime(23, 59, 59); // End date at 23:59:59
 
-        // orderReportService의 통합 메서드를 호출하여 기간에 따른 주문 금액 집계 결과 반환
+        // Call the unified service method to return aggregated order amounts by period
         return orderReportService.getOrders(periodType, startDateTime, endDateTime);
     }
 

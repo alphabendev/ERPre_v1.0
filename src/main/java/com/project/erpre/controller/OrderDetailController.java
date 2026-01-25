@@ -30,10 +30,10 @@ public class OrderDetailController {
     public ResponseEntity<?> createOrderDetail(@RequestBody OrderDetailDTO orderDetailDTO) {
 
         try {
-            // DTO -> Entity 변환
+            // Convert DTO -> Entity
             OrderDetail orderDetail = orderDetailService.convertToEntity(orderDetailDTO);
 
-            // 엔티티 저장
+            // Save entity
             OrderDetail savedOrderDetail = orderDetailService.createOrderDetail(orderDetail);
 
             return new ResponseEntity<>(savedOrderDetail, HttpStatus.CREATED);
@@ -46,23 +46,23 @@ public class OrderDetailController {
     @PostMapping(value = "/api/orderDetails/batch")
     public ResponseEntity<?> createOrderDetails(@RequestBody List<OrderDetailDTO> orderDetailDTOList) {
         try {
-            // DTO 리스트 -> 엔티티 리스트 변환
+            // Convert DTO list -> Entity list
             List<OrderDetail> orderDetailList = orderDetailDTOList.stream()
                     .map(orderDetailService::convertToEntity)
                     .collect(Collectors.toList());
 
-            // 엔티티 리스트 저장 (배치 저장 가능)
+            // Save entity list (batch save possible)
             List<OrderDetail> savedOrderDetails = orderDetailService.createOrderDetails(orderDetailList);
 
             return new ResponseEntity<>(savedOrderDetails, HttpStatus.CREATED);
 
         } catch (Exception e) {
-            logger.error("배치 주문 상세 저장 중 오류 발생: ", e);
+            logger.error("Error occurred while saving order details in batch: ", e);
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // 기존 단일 주문 상세 데이터 처리 엔드포인트 유지 가능
+    // Existing single order detail processing endpoint can be kept
 
     @PutMapping("/api/orderDetails/{id}")
     public ResponseEntity<?> updateOrderDetail(@PathVariable Integer id, @RequestBody OrderDetailDTO orderDetailDTO) {
@@ -70,7 +70,7 @@ public class OrderDetailController {
             OrderDetail updatedOrderDetail = orderDetailService.updateOrderDetail(id, orderDetailDTO);
             return new ResponseEntity<>(updatedOrderDetail, HttpStatus.OK);
         } catch (Exception e) {
-            logger.error("주문 상세 수정 중 오류 발생: ", e);
+            logger.error("Error occurred while updating order detail: ", e);
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -80,12 +80,12 @@ public class OrderDetailController {
         try {
             boolean isDeleted = orderDetailService.deleteOrderDetail(id);
             if (isDeleted) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 삭제 성공
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT); // Deletion successful
             } else {
-                return new ResponseEntity<>("삭제할 항목이 없습니다.", HttpStatus.NOT_FOUND); // 항목 없음
+                return new ResponseEntity<>("No item to delete.", HttpStatus.NOT_FOUND); // Item not found
             }
         } catch (Exception e) {
-            logger.error("주문 상세 삭제 중 오류 발생: ", e);
+            logger.error("Error occurred while deleting order detail: ", e);
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

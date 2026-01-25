@@ -19,12 +19,14 @@ public class OrderDetailService {
 
     @Autowired
     private OrderRepository orderRepository;
+
     @Autowired
     private ProductRepository productRepository;
+
     @Autowired
     private OrderDetailRepository orderDetailRepository;
 
-    // OrderDetailDTO -> OrderDetail 엔티티로 변환하는 메서드
+    // Convert OrderDetailDTO to OrderDetail entity
     public OrderDetail convertToEntity(OrderDetailDTO orderDetailDTO) {
         OrderDetail orderDetail = OrderDetail.builder()
                 .orderNo(orderDetailDTO.getOrderNo())
@@ -34,20 +36,18 @@ public class OrderDetailService {
                 .orderDDeliveryRequestDate(orderDetailDTO.getOrderDDeliveryRequestDate())
                 .orderDInsertDate(orderDetailDTO.getOrderDInsertDate())
                 .orderDUpdateDate(orderDetailDTO.getOrderDUpdateDate())
-                .orderDDeleteYn(Optional.ofNullable(orderDetailDTO.getOrderDDeleteYn()).orElse("N")) // 기본값 'N' 설정
+                .orderDDeleteYn(Optional.ofNullable(orderDetailDTO.getOrderDDeleteYn()).orElse("N")) // default 'N'
                 .orderDDeleteDate(orderDetailDTO.getOrderDDeleteDate())
                 .build();
 
-        // Order 엔티티와 Product 엔티티를 조회하여 설정
+        // Set associated Order and Product entities
         orderDetail.setOrder(orderRepository.findById(orderDetailDTO.getOrderNo()).orElse(null));
         orderDetail.setProduct(productRepository.findById(orderDetailDTO.getProductCd()).orElse(null));
 
         return orderDetail;
     }
 
-
-
-    // OrderDetail 엔티티 -> OrderDetailDTO로 변환하는 메서드
+    // Convert OrderDetail entity to OrderDetailDTO
     public OrderDetailDTO convertToDTO(OrderDetail orderDetail) {
         return OrderDetailDTO.builder()
                 .orderNo(orderDetail.getOrderNo())
@@ -64,87 +64,85 @@ public class OrderDetailService {
                 .build();
     }
 
-    // 주문 상세 생성
+    // Create a single order detail
     public OrderDetail createOrderDetail(OrderDetail orderDetail) {
         return orderDetailRepository.save(orderDetail);
     }
 
-    // 여러 OrderDetail 생성 메서드 (추가된 부분)
+    // Create multiple order details
     public List<OrderDetail> createOrderDetails(List<OrderDetail> orderDetails) {
-        return orderDetailRepository.saveAll(orderDetails);  // saveAll로 리스트 저장
+        return orderDetailRepository.saveAll(orderDetails);
     }
 
-    // 주문 상세 조회 (ID로)
+    // Retrieve an order detail by ID
     public Optional<OrderDetail> getOrderDetailById(Integer id) {
         return orderDetailRepository.findById(id);
     }
 
-    // 모든 주문 상세 조회
+    // Retrieve all order details
     public List<OrderDetail> getAllOrderDetails() {
         return orderDetailRepository.findAll();
     }
 
-    // 주문 상세 수정
+    // Update an existing order detail
     public OrderDetail updateOrderDetail(OrderDetail orderDetail) {
         return orderDetailRepository.save(orderDetail);
     }
 
-    // 주문 상세 삭제
+    // Delete an order detail and recalculate order total
     public boolean deleteOrderDetail(Integer id) {
         OrderDetail orderDetail = orderDetailRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("주문 상세 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("Order detail not found."));
 
-        // 주문 상세 삭제
+        // Delete the order detail
         orderDetailRepository.delete(orderDetail);
 
-        // 주문 총 금액 재계산
+        // Recalculate total order price
         Order order = orderDetail.getOrder();
-        order.recalculateTotalPrice(); // 재계산 메서드 호출
-        orderRepository.save(order); // 업데이트된 주문 저장
+        order.recalculateTotalPrice();
+        orderRepository.save(order);
 
-        return true; // 삭제 성공
+        return true;
     }
 
-
-
+    // Update an order detail using DTO
     public OrderDetail updateOrderDetail(Integer id, OrderDetailDTO orderDetailDTO) {
         OrderDetail existingOrderDetail = orderDetailRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("주문 상세 정보를 찾을 수 없습니다."));
-        // 필요한 필드만 업데이트
+                .orElseThrow(() -> new RuntimeException("Order detail not found."));
+
+        // Update only necessary fields
         existingOrderDetail.setOrderDPrice(orderDetailDTO.getOrderDPrice());
         existingOrderDetail.setOrderDQty(orderDetailDTO.getOrderDQty());
         existingOrderDetail.setOrderDTotalPrice(orderDetailDTO.getOrderDTotalPrice());
         existingOrderDetail.setOrderDUpdateDate(LocalDateTime.now());
         existingOrderDetail.setOrderDDeliveryRequestDate(orderDetailDTO.getOrderDDeliveryRequestDate());
 
-        // 연관된 Order와 Product 엔티티도 업데이트
+        // Update associated Order and Product entities
         existingOrderDetail.setOrder(orderRepository.findById(orderDetailDTO.getOrderNo()).orElse(null));
         existingOrderDetail.setProduct(productRepository.findById(orderDetailDTO.getProductCd()).orElse(null));
 
         return orderDetailRepository.save(existingOrderDetail);
     }
-    public OrderDetail createOrderDetail(OrderDetailDTO orderDetailDTO) {
-        // 유효성 검사 추가
-        if (orderDetailDTO.getProductCd() == null) {
-            throw new IllegalArgumentException("제품 코드가 필요합니다.");
-        }
 
+    // Create an order detail from DTO with validation
+    public OrderDetail createOrderDetail(OrderDetailDTO orderDetailDTO) {
+        if (orderDetailDTO.getProductCd() == null) {
+            throw new IllegalArgumentException("Product code is required.");
+        }
         OrderDetail orderDetail = convertToEntity(orderDetailDTO);
         return orderDetailRepository.save(orderDetail);
     }
 
+    // Retrieve all order details for a specific order
     public List<OrderDetail> getOrderDetailsByOrderNo(Integer orderNo) {
-        // 주문이 존재하는지 확인
         Order existingOrder = orderRepository.findById(orderNo)
-                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("Order not found."));
 
-        // 해당 주문의 상세 정보를 조회
         return orderDetailRepository.findByOrderOrderNo(orderNo);
     }
 
+    // Get total quantity of all orders
     public Long getTotalOrderQuantity() {
-        return orderDetailRepository.sumOrderDQty(); // 모든 판매량을 합산한 값 반환
+        return orderDetailRepository.sumOrderDQty();
     }
-
-
 }

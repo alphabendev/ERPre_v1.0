@@ -46,16 +46,19 @@ public class OrderDetail {
     private Timestamp orderDDeliveryRequestDate;
 
     @Column(name = "order_d_insert_date", nullable = false, insertable = false)
-    // insertable = false: JPA가 엔터티를 삽입할 때 이 필드를 무시하고, 데이터베이스가 자동으로 값을 설정하도록 합니다. 예: CURRENT_TIMESTAMP로 현재 시간을 자동 입력.
+    // insertable = false: JPA ignores this field when inserting the entity,
+    // and the database automatically sets the value. Example: automatically insert current time using CURRENT_TIMESTAMP.
     private LocalDateTime orderDInsertDate;
 
     @Column(name = "order_d_update_date")
     private LocalDateTime orderDUpdateDate;
 
     @Column(name = "order_d_delete_yn", nullable = false)
-    private String orderDDeleteYn="N";
+
+    @Builder.Default
+    private String orderDDeleteYn = "N"; // Default value 'N' indicates not deleted
 
     @Column(name = "order_d_delete_date")
-    private Timestamp orderDDeleteDate; // 삭제 일시
+    private Timestamp orderDDeleteDate; // Deletion timestamp
 
 }

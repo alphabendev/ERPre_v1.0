@@ -18,14 +18,13 @@ import java.util.List;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Employee {
 
-    //    @GeneratedValue(strategy = GenerationType.IDENTITY) 직원id는 자동증가하는 값이 아님
+    // @GeneratedValue(strategy = GenerationType.IDENTITY) Employee ID is not auto-incremented
     @Id
     @Column(name = "employee_id", length = 50, nullable = false)
     private String employeeId;
 
     @Column(name = "employee_pw", length = 50, nullable = false)
     private String employeePw;
-
 
     @Column(name = "employee_name", length = 50, nullable = false)
     private String employeeName;
@@ -46,13 +45,12 @@ public class Employee {
     private Timestamp employeeUpdateDate;
 
     @Column(name = "employee_delete_yn", length = 20, nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'N'")
-    private String employeeDeleteYn; // 삭제 여부 기본값 'N'
+    private String employeeDeleteYn; // Default value 'N' indicates deletion status
 
     @Column(name = "employee_delete_date")
-    private Timestamp employeeDeleteDate; // 삭제 일시
+    private Timestamp employeeDeleteDate; // Deletion timestamp
 
-
-    // 하나의 직원이 여러 개의 주문을 가질 수 있따
+    // One employee can have multiple orders
     @ToString.Exclude
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
     @JsonIgnore

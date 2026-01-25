@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 @Service
 public class OrderService {
 
-    private static final Logger logger = LoggerFactory.getLogger(OrderService.class); // 로거 선언
+    private static final Logger logger = LoggerFactory.getLogger(OrderService.class); // Declare logger
 
     @Autowired
     private OrderRepository orderRepository;
@@ -32,67 +32,66 @@ public class OrderService {
 
     @Autowired
     private EmployeeRepository employeeRepository;
+
     @Autowired
     private ProductRepository productRepository;
 
-    // 전체 주문 목록 가져오기
+    // Get all orders
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
     }
 
-    // 주문 상태별 주문 목록 가져오기
+    // Get orders by status
     public List<Order> getOrdersByStatus(String status) {
         return orderRepository.findByOrderHStatus(status);
     }
 
-    // 고객사 이름으로 검색
+    // Search by customer name
     public List<Order> getOrdersByCustomerName(String customerName) {
         return orderRepository.findByCustomerCustomerNameContaining(customerName);
     }
 
-    // 날짜로 주문 목록 검색
+    // Search orders by date
     public List<Order> getOrdersByOrderDate(String orderDate) {
         return orderRepository.findByOrderHInsertDateContaining(orderDate);
     }
 
-    // 특정 주문번호로 주문 조회
+    // Get order by specific order number
     public Order getOrderById(Integer orderNo) {
         return orderRepository.findById(orderNo).orElse(null);
     }
 
-
     public Order createOrder(OrderDTO orderDTO) {
 
-        // 고객 번호로 고객 엔티티를 조회
+        // Find customer entity by customer number
         Customer customer = customerRepository.findById(orderDTO.getCustomer().getCustomerNo())
-                .orElseThrow(() -> new RuntimeException("고객 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("Customer information not found."));
 
-        // 직원 정보도 동일하게 처리 (직원 ID를 이용해 조회)
+        // Handle employee information similarly (find by employee ID)
         Employee employee = employeeRepository.findById(orderDTO.getEmployee().getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("직원 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("Employee information not found."));
 
-        // DTO -> Entity 변환
+        // Convert DTO -> Entity
         Order order = Order.builder()
-                .orderNo(orderDTO.getOrderNo()) // 주문 번호
-                .employee(orderDTO.getEmployee()) // 직원 정보
-                .customer(orderDTO.getCustomer()) // 고객 정보
-                .orderHTotalPrice(orderDTO.getOrderHTotalPrice()) // 총 가격
-                .orderHStatus(orderDTO.getOrderHStatus()) // 주문 상태
-                .orderHDeleteYn("N") // 기본값 설정
+                .orderNo(orderDTO.getOrderNo()) // Order number
+                .employee(orderDTO.getEmployee()) // Employee info
+                .customer(orderDTO.getCustomer()) // Customer info
+                .orderHTotalPrice(orderDTO.getOrderHTotalPrice()) // Total price
+                .orderHStatus(orderDTO.getOrderHStatus()) // Order status
+                .orderHDeleteYn("N") // Default value
                 .build();
 
         if (order.getOrderHDeleteYn() == null) {
-            order.setOrderHDeleteYn("N"); // 기본값 설정
+            order.setOrderHDeleteYn("N"); // Set default
         }
 
-
-        // 엔터티 저장
+        // Save entity
         return orderRepository.save(order);
     }
 
     public OrderDTO getOrderHeaderById(Integer orderNo) {
         Order order = orderRepository.findById(orderNo)
-                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("Order not found."));
 
         List<OrderDetail> orderDetails = orderDetailRepository.findByOrderOrderNo(orderNo);
         List<Product> products = orderDetails.stream()
@@ -127,11 +126,12 @@ public class OrderService {
 
         return orderDTO;
     }
+
     public Order updateOrder(Integer orderNo, OrderDTO orderDTO) {
         Order existingOrder = orderRepository.findById(orderNo)
-                .orElseThrow(() -> new RuntimeException("주문 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("Order information not found."));
 
-        // 고객 및 직원 정보 업데이트 (기존 로직 유지)
+        // Update customer and employee info (keep existing logic)
         existingOrder.setCustomer(customerRepository.findById(orderDTO.getCustomer().getCustomerNo()).orElse(null));
         existingOrder.setEmployee(employeeRepository.findById(orderDTO.getEmployee().getEmployeeId()).orElse(null));
         existingOrder.setOrderHTotalPrice(orderDTO.getOrderHTotalPrice());
@@ -139,15 +139,15 @@ public class OrderService {
         existingOrder.setOrderHUpdateDate(LocalDateTime.now());
         existingOrder.setOrderHDeleteYn(orderDTO.getOrderHDeleteYn());
 
-        // 주문 상세 업데이트 (기존 로직 유지)
+        // Update order details (keep existing logic)
         for (OrderDetailDTO detailDTO : orderDTO.getOrderDetails()) {
             OrderDetail existingDetail = orderDetailRepository.findById(detailDTO.getOrderNo())
-                    .orElseThrow(() -> new RuntimeException("주문 상세를 찾을 수 없습니다."));
+                    .orElseThrow(() -> new RuntimeException("Order detail not found."));
             existingDetail.setOrderDDeliveryRequestDate(detailDTO.getOrderDDeliveryRequestDate());
             orderDetailRepository.save(existingDetail);
         }
 
-        // 삭제할 주문 상세 처리
+        // Handle deleted order details
         if (orderDTO.getDeletedDetailIds() != null) {
             for (Integer detailId : orderDTO.getDeletedDetailIds()) {
                 orderDetailRepository.deleteById(detailId);
@@ -157,8 +157,7 @@ public class OrderService {
         return orderRepository.save(existingOrder);
     }
 
-
-    // 주문 삭제
+    // Delete order
     public void deleteOrder(Integer orderNo) {
         orderRepository.deleteById(orderNo);
     }
@@ -166,54 +165,53 @@ public class OrderService {
     public Order updateOrder(Order order) {
         return orderRepository.save(order);
     }
-    public OrderDetail addOrderDetail(Integer orderNo, OrderDetailDTO orderDetailDTO) {
-        // 주문이 존재하는지 확인
-        Order existingOrder = orderRepository.findById(orderNo)
-                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다."));
 
-        // DTO를 엔티티로 변환
+    public OrderDetail addOrderDetail(Integer orderNo, OrderDetailDTO orderDetailDTO) {
+        // Check if order exists
+        Order existingOrder = orderRepository.findById(orderNo)
+                .orElseThrow(() -> new RuntimeException("Order not found."));
+
+        // Convert DTO to entity
         OrderDetail orderDetail = new OrderDetailService().convertToEntity(orderDetailDTO);
-        orderDetail.setOrder(existingOrder); // 주문 설정
+        orderDetail.setOrder(existingOrder); // Set order
         return orderDetailRepository.save(orderDetail);
     }
 
-
-    // 주문 상세 삭제
+    // Delete order detail
     public void deleteOrderDetail(Integer orderNo, Integer detailId) {
-        logger.info("deleteOrderDetail - 주문 번호: {}, 삭제할 상세 번호: {}", orderNo, detailId); // 삭제 요청 로그
+        logger.info("deleteOrderDetail - Order No: {}, Detail to delete: {}", orderNo, detailId); // Delete request log
 
-        // 주문이 존재하는지 확인
+        // Check if order exists
         Order existingOrder = orderRepository.findById(orderNo)
-                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("Order not found."));
 
-        logger.info("주문 {} 존재 확인 완료", orderNo); // 주문 확인 완료 로그
+        logger.info("Order {} existence confirmed", orderNo); // Order confirmation log
 
-        // 상세 항목을 삭제
+        // Delete detail item
         orderDetailRepository.deleteById(detailId);
 
-        logger.info("상세 주문 {} 삭제 완료", detailId); // 삭제 완료 로그
+        logger.info("Order detail {} deleted", detailId); // Deletion complete log
     }
 
-    
-    //전체 수량 카운트 코드
+    // Get total order count
     public long getTotalOrderCount() {
         return orderRepository.countOrders();
     }
 
-    // 특정 상태에 따른 주문 수 계산
+    // Count orders by specific status
     public long countOrdersByStatus(String status) {
         return orderRepository.countByOrderHStatus(status);
     }
 
     public BigDecimal getApprovedTotalAmount() {
         LocalDate thirtyDaysAgo = LocalDate.now().minusDays(30);
-        LocalDateTime thirtyDaysAgoDateTime = thirtyDaysAgo.atStartOfDay(); // LocalDateTime으로 변환
+        LocalDateTime thirtyDaysAgoDateTime = thirtyDaysAgo.atStartOfDay(); // Convert to LocalDateTime
         return orderRepository.sumApprovedOrdersLastMonth(thirtyDaysAgoDateTime);
     }
 
     public BigDecimal getIngTotalAmount() {
         LocalDate thirtyDaysAgo = LocalDate.now().minusDays(30);
-        LocalDateTime thirtyDaysAgoDateTime = thirtyDaysAgo.atStartOfDay(); // LocalDateTime으로 변환
+        LocalDateTime thirtyDaysAgoDateTime = thirtyDaysAgo.atStartOfDay(); // Convert to LocalDateTime
         return orderRepository.sumIngOrdersLastMonth(thirtyDaysAgoDateTime);
     }
 
@@ -227,22 +225,18 @@ public class OrderService {
             deadline = LocalDateTime.of(now.getYear(), now.getMonth(), 15, 0, 0);
         }
 
-        return deadline.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일")); // "2024년 9월 15일" 형식
+        return deadline.format(DateTimeFormatter.ofPattern("yyyy MMMM d")); // Format example: "2024 January 15"
     }
-
 
     public BigDecimal getTotalSalesLastYear() {
         LocalDateTime oneYearAgo = LocalDateTime.now().minusYears(1);
         return orderRepository.sumIngOrdersLastYear(oneYearAgo);
     }
 
-    // 오늘부터 30일간의 매출 계산
+    // Calculate sales for the last 30 days
     public BigDecimal getTotalSalesLast30Days() {
-        LocalDateTime today = LocalDateTime.now(); // 현재 날짜와 시간
-        LocalDateTime thirtyDaysAgo = today.minusDays(30); // 30일 전 날짜 계산
+        LocalDateTime today = LocalDateTime.now(); // Current date and time
+        LocalDateTime thirtyDaysAgo = today.minusDays(30); // Date 30 days ago
         return orderRepository.sumTotalSalesForPeriod(thirtyDaysAgo, today);
     }
-
-
-
 }

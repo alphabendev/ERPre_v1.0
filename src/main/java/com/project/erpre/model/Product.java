@@ -28,7 +28,7 @@ public class Product {
     @JsonManagedReference
     @JoinColumn(name = "category_no", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @JsonIgnore
-    private Category category;
+    private Category category;  // Category information (foreign key to m_category table)
 
     @Column(name = "product_nm", length = 100, nullable = false)
     private String productNm;
@@ -40,13 +40,13 @@ public class Product {
     private LocalDateTime productUpdateDate;
 
     @Column(name = "product_delete_yn", length = 20, nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'N'")
-    private String productDeleteYn; // 삭제 여부 기본값 'N'
+    private String productDeleteYn; // Deletion status, default 'N'
 
     @Column(name = "product_delete_date")
-    private Timestamp productDeleteDate; // 삭제 일시
+    private Timestamp productDeleteDate; // Deletion timestamp
 
     @Column(name = "product_price", nullable = false, precision = 15, scale = 2)
-    private BigDecimal productPrice; // 상품 가격
+    private BigDecimal productPrice; // Product price
 
     @PrePersist
     public void prePersist() {
@@ -64,10 +64,10 @@ public class Product {
     @ToString.Exclude
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private List<Price> prices;
+    private List<Price> prices;  // List of price entries associated with the product
 
     @ToString.Exclude
     @JsonIgnore
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderDetail> orderDetails;
+    private List<OrderDetail> orderDetails;  // List of order details associated with the product
 }

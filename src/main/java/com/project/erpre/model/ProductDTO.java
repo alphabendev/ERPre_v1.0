@@ -29,23 +29,23 @@ public class ProductDTO {
     private BigDecimal orderDPrice;
     private String customerName;
     private Integer categoryNo;
-    private Integer topCategoryNo;    // 대분류 번호
-    private Integer middleCategoryNo; // 중분류 번호
-    private Integer lowCategoryNo;    // 소분류 번호
-    private String topCategory; // 대분류 이름
-    private String middleCategory; // 중분류 이름
-    private String lowCategory; // 소분류 이름
-    private String productDeleteYn; // 삭제 여부 기본값 'N'
-    private Timestamp productDeleteDate; // 삭제 일시
-    private BigDecimal productPrice; // 상품 가격
-    private BigDecimal priceCustomer; // 고객사별 상품 가격
+    private Integer topCategoryNo;    // Top-level category ID
+    private Integer middleCategoryNo; // Mid-level category ID
+    private Integer lowCategoryNo;    // Low-level category ID
+    private String topCategory;       // Top-level category name
+    private String middleCategory;    // Mid-level category name
+    private String lowCategory;       // Low-level category name
+    private String productDeleteYn;   // Deletion status, default 'N'
+    private Timestamp productDeleteDate; // Deletion timestamp
+    private BigDecimal productPrice;      // Product price
+    private BigDecimal priceCustomer;     // Customer-specific product price
 
-
-    // 1. 전체 상품 목록 조회 생성자
+    // 1. Constructor for retrieving the entire product list
     public ProductDTO(String productCd, String productNm, LocalDateTime productInsertDate, LocalDateTime productUpdateDate,
                       Timestamp productDeleteDate, String productDeleteYn,
                       String lowCategory, String middleCategory, String topCategory,
-                      Integer lowCategoryNo, Integer middleCategoryNo,Integer topCategoryNo, BigDecimal productPrice, BigDecimal priceCustomer) {
+                      Integer lowCategoryNo, Integer middleCategoryNo, Integer topCategoryNo,
+                      BigDecimal productPrice, BigDecimal priceCustomer) {
         this.productCd = productCd;
         this.productNm = productNm;
         this.productInsertDate = productInsertDate;
@@ -62,10 +62,11 @@ public class ProductDTO {
         this.priceCustomer = priceCustomer;
     }
 
-    // 2. 상품 상세정보 조회 생성자
+    // 2. Constructor for retrieving product detail information
     public ProductDTO(String productCd, String productNm, LocalDateTime productInsertDate, LocalDateTime productUpdateDate,
-                      String employeeName, String customerName, Date orderDDeliveryRequestDate, Integer orderDQty, BigDecimal orderDTotalPrice,
-                      String topCategory, String middleCategory, String lowCategory, BigDecimal productPrice, BigDecimal orderDPrice) {
+                      String employeeName, String customerName, Date orderDDeliveryRequestDate, Integer orderDQty,
+                      BigDecimal orderDTotalPrice, String topCategory, String middleCategory, String lowCategory,
+                      BigDecimal productPrice, BigDecimal orderDPrice) {
         this.productCd = productCd;
         this.productNm = productNm;
         this.productInsertDate = productInsertDate;
@@ -82,12 +83,11 @@ public class ProductDTO {
         this.orderDPrice = orderDPrice;
     }
 
-    // 3. 상품 등록 및 수정 생성자
+    // 3. Constructor for product creation and update
     public ProductDTO(String productCd, String productNm, Integer categoryNo, BigDecimal productPrice) {
         this.productCd = productCd;
         this.productNm = productNm;
         this.categoryNo = categoryNo;
         this.productPrice = productPrice;
     }
-
 }

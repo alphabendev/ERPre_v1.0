@@ -7,7 +7,6 @@ import com.project.erpre.repository.CategoryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -18,12 +17,12 @@ import java.util.stream.Collectors;
 @Service
 public class CategoryService {
 
-    private static final Logger logger = LoggerFactory.getLogger(CategoryController.class); // Logger 선언
+    private static final Logger logger = LoggerFactory.getLogger(CategoryController.class); // Logger declaration
 
     @Autowired
     private CategoryRepository categoryRepository;
 
-    // DTO -> Entity 변환 메서드
+    // Method to convert DTO to Entity
     private Category convertToEntity(CategoryDTO categoryDTO) {
         Category category = new Category();
         category.setCategoryLevel(categoryDTO.getCategoryLevel());
@@ -33,7 +32,7 @@ public class CategoryService {
         return category;
     }
 
-    // Entity -> DTO 변환 메서드
+    // Method to convert Entity to DTO
     private CategoryDTO convertToDTO(Category category) {
         return CategoryDTO.builder()
                 .categoryLevel(category.getCategoryLevel())
@@ -42,7 +41,7 @@ public class CategoryService {
                 .build();
     }
 
-    //전체 카테고리
+    // All categories
     public List<CategoryDTO> getAllCategoryPaths() {
         List<Object[]> result = categoryRepository.findCategoryPathsAsObjects();
         return result.stream().map(obj -> new CategoryDTO(
@@ -51,25 +50,25 @@ public class CategoryService {
                 (Integer) obj[2], // three
                 (Integer) obj[3], // category_no
                 (Integer) obj[4], // level
-                (String) obj[5],  // 카테고리경로
+                (String) obj[5],  // category_path
                 (Timestamp) obj[6], // category_insert_date
                 (Timestamp) obj[7] // category_update_date
         )).collect(Collectors.toList());
     }
 
-    // 특정 카테고리
+    // Specific category
     public Optional<Category> getCategoryById(Integer categoryNo) {
         return categoryRepository.findById(categoryNo);
     }
 
-    // 카테고리 저장
+    // Save category
     public Category saveCategory(CategoryDTO categoryDTO) {
-        List<Category> existCategory = categoryRepository.findByCategoryNmAndCategoryDeleteYn(categoryDTO.getCategoryNm(), "N");
-        if (!existCategory.isEmpty()) {
-            throw new IllegalArgumentException('"' + categoryDTO.getCategoryNm() + '"' + " 카테고리는 이미 존재하는 이름입니다.");
+        List<Category> existingCategory = categoryRepository.findByCategoryNmAndCategoryDeleteYn(categoryDTO.getCategoryNm(), "N");
+        if (!existingCategory.isEmpty()) {
+            throw new IllegalArgumentException('"' + categoryDTO.getCategoryNm() + '"' + " category already exists.");
         }
         logger.info("★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★");
-        // DTO -> Entity 변환
+        // DTO -> Entity conversion
         Category category = new Category();
         category.setCategoryLevel(categoryDTO.getCategoryLevel());
         category.setCategoryNm(categoryDTO.getCategoryNm());
@@ -81,27 +80,27 @@ public class CategoryService {
         logger.info("[CUSTOM_LOG] categoryDTO.getParentCategoryNo() : " + categoryDTO.getParentCategoryNo());
         logger.info("★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★");
 
-        // // 삽입 날짜 설정 (새로 삽입할 때만)
+        // // Set insert date (only when inserting new)
         // category.setCategoryInsertDate(new Timestamp(System.currentTimeMillis()));
 
-        // 엔터티 저장
+        // Save entity
         return categoryRepository.save(category);
     }
 
-    // 카테고리 수정
+    // Update category
     public Category updateCategory(Integer categoryNo, CategoryDTO categoryDTO) {
         logger.info("★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★");
         logger.info("[CUSTOM_LOG] CategoryService > updateCategory");
 
-        Optional<Category> existingCategoryOptional = categoryRepository.findById(categoryNo); // 수정을 위한 기존의 카테고리 엔티티 조회
+        Optional<Category> existingCategoryOptional = categoryRepository.findById(categoryNo); // Retrieve existing category entity for update
         if (!existingCategoryOptional.isPresent()) {
-            throw new IllegalArgumentException("해당 카테고리가 존재하지 않습니다"); // 조회한 카테고리가 존재하지 않음을 명시해줌
+            throw new IllegalArgumentException("The specified category does not exist."); // Indicates that the retrieved category does not exist
         }
 
-        // existingCategoryOptional 은 Optional로 감싸진 객체 null 허용
-        // existingCategory 는 위에서 값을 추출한 실제 객체
+        // existingCategoryOptional is an Optional object, allows null
+        // existingCategory is the actual object extracted above
 
-        // DTO -> Entity 변환
+        // DTO -> Entity conversion
         Category existingCategory = existingCategoryOptional.get();
         existingCategory.setCategoryLevel(categoryDTO.getCategoryLevel());
         existingCategory.setCategoryNm(categoryDTO.getCategoryNm());
@@ -116,7 +115,7 @@ public class CategoryService {
         return categoryRepository.save(existingCategory);
     }
 
-    // 카테고리 삭제
+    // Delete category
     public void deleteById(Integer categoryNo) {
         Category category = categoryRepository.findById(categoryNo).orElse(null);
         if (category != null) {
@@ -128,21 +127,21 @@ public class CategoryService {
     }
 
     private void deleteSubCategories(Category parentCategory) {
-        // 중분류(하위 1단계) 카테고리 조회
+        // Retrieve middle-level (1st-level child) categories
         List<Category> subCategories = categoryRepository.findByParentCategoryNo(parentCategory.getCategoryNo());
-    
+
         for (Category subCategory : subCategories) {
-            // 중분류 삭제 처리
+            // Mark middle-level category as deleted
             subCategory.setCategoryDeleteYn("Y");
             subCategory.setCategoryDeleteDate(new Timestamp(System.currentTimeMillis()));
             categoryRepository.save(subCategory);
-    
-            // 하위 카테고리가 있는 경우 재귀적으로 삭제 처리
-            deleteSubCategories(subCategory); // 재귀적으로 소분류까지 처리
+
+            // If there are subcategories, recursively delete them
+            deleteSubCategories(subCategory); // Recursively handle lower-level categories
         }
     }
 
-    // 🔴모든 분류
+    // 🔴All classifications
     public List<Category> getAllCategory() {
         return categoryRepository.findAllCategory();
     }

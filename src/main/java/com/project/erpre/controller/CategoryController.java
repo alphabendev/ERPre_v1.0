@@ -14,62 +14,64 @@ import java.util.Optional;
 @RequestMapping("/api/category")
 public class CategoryController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CategoryController.class); // Logger 선언
+    private static final Logger logger = LoggerFactory.getLogger(CategoryController.class); // Logger declaration
 
     @Autowired
     public CategoryService categoryService;
 
 
-    //전체 카테고리 경로
+    // All category paths
     @GetMapping("/allPaths")
     public List<CategoryDTO> getAllCategoryPaths() {
         return categoryService.getAllCategoryPaths();
     }
 
-    // 🔴모든 분류
+    // 🔴 All categories
     @GetMapping("/all")
     public List<Category> getAllCategory() {
         return categoryService.getAllCategory();
     }
 
-    //특정 카테고리
+    // Specific category
     @GetMapping("/{categoryNo}")
     public Optional<Category> getCategoryById(@PathVariable Integer categoryNo) {
         return categoryService.getCategoryById(categoryNo);
     }
 
-    //카테고리 저장
+    // Save category
     @PostMapping("/save")
-    public Category saveCategory(@RequestBody CategoryDTO categoryDTO) { // Entity는 폼 데이터나 쿼리 파라미터로 자동 바인딩되지만, DTO는 JSON 본문을 객체로 변환하기 위해 @RequestBody가 필요합니다.
+    public Category saveCategory(@RequestBody CategoryDTO categoryDTO) {
+        // Entity is automatically bound via form data or query parameters,
+        // but DTO requires @RequestBody to convert JSON body into an object.
         return categoryService.saveCategory(categoryDTO);
     }
 
-    //카테고리 수정
+    // Update category
     @PutMapping("/upd/{categoryNo}")
     public Category updateCategory(@PathVariable Integer categoryNo, @RequestBody CategoryDTO categoryDTO ) {
         categoryDTO.setCategoryNo(categoryNo);
         return categoryService.updateCategory(categoryNo, categoryDTO);
     }
 
-    //카테고리 삭제
+    // Delete category
     @DeleteMapping("/del/{categoryNo}")
     public void deleteCategory(@PathVariable Integer categoryNo) {
         categoryService.deleteById(categoryNo);
     }
 
-    //카테고리 대분류
+    // Top-level category
     @GetMapping("/top")
     public List<Category> getTopCategory() {
         return categoryService.getTopCategory();
     }
 
-    //카테고리 중분류
+    // Middle-level category
     @GetMapping("/middle/{topCategoryId}")
     public List<Category> getMiddleCategory(@PathVariable Integer topCategoryId) {
         return categoryService.getMiddleCategory(topCategoryId);
     }
 
-    //카테고리 소분류
+    // Low-level category
     @GetMapping("/low/{middleCategoryId}/{topCategoryId}")
     public List<Category> getLowCategory(@PathVariable Integer topCategoryId,
                                          @PathVariable Integer middleCategoryId) {

@@ -32,6 +32,6 @@ public class CustomerDTO {
     private Timestamp customerTransactionEndDate;
     private Timestamp customerInsertDate;
     private Timestamp customerUpdateDate;
-    private String customerDeleteYn; // 삭제 여부 기본값 'N'
-    private Timestamp customerDeleteDate; // 삭제 일시
+    private String customerDeleteYn; // Default value 'N' indicates deletion status
+    private Timestamp customerDeleteDate; // Deletion timestamp
 }

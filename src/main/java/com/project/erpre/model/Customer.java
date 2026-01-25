@@ -11,7 +11,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "m_customer")
-@Data //@Data는 @Getter, @Setter, @ToString, @EqualsAndHashCode 등을 포함
+@Data // @Data includes @Getter, @Setter, @ToString, @EqualsAndHashCode, etc.
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
@@ -71,20 +71,21 @@ public class Customer {
     private Timestamp customerUpdateDate;
 
     @Column(name = "customer_delete_yn", length = 20, nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'N'")
-    private String customerDeleteYn; // 삭제 여부 기본값 'N'
+    private String customerDeleteYn; // Default value 'N' indicates deletion status
 
     @Column(name = "customer_delete_date")
-    private Timestamp customerDeleteDate; // 삭제 일시
+    private Timestamp customerDeleteDate; // Deletion timestamp
 
     @ToString.Exclude
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
-
-    @JsonIgnore // 순환 참조 방지(무한 재귀 호출-스택 오버플로우 해결) -> 해당 필드를 완전히 직렬화/역직렬화에서 배제합니다. 특정 필드를 직렬화에서 아예 제외하고 싶을 때 사용됩니다.
+    @JsonIgnore
+    // Prevent circular reference (infinite recursive call - stack overflow solution)
+    // -> Completely exclude this field from serialization/deserialization.
+    // Used when you want to completely ignore a field during serialization.
     private List<Order> orderHeads;
 
     @ToString.Exclude
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private List<Price> prices = new ArrayList<>();  // 빈 리스트로 초기화
-
+    private List<Price> prices = new ArrayList<>();  // Initialized as an empty list
 }
