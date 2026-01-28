@@ -4,27 +4,35 @@ import com.project.erpre.model.Employee;
 import com.project.erpre.model.EmployeeDTO;
 import com.project.erpre.repository.EmployeeRepository;
 import com.project.erpre.service.EmployeeService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
-import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
+@Slf4j
+@RequiredArgsConstructor
 public class EmployeeController {
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
 
-    @Autowired
-    private EmployeeService employeeService;
+    private final EmployeeRepository    employeeRepository;
+    private final EmployeeService       employeeService;
+
+    @Value("${admin.id}")
+    private String adminId;
+
+    @Value("${admin.password}")
+    private String  adminPassword;
 
     // Login endpoint
     @PostMapping("/login")
@@ -66,17 +74,18 @@ public class EmployeeController {
     @GetMapping("/employee")
     public ResponseEntity<Employee> getEmployee(HttpSession session) {
         Employee employee = (Employee) session.getAttribute("employee");
+
         if (employee != null) {
             return ResponseEntity.ok(employee);
         } else {
-            // Temporary code for development (default admin login)
-            // Employee employeeTmp = employeeRepository
-            //         .findByEmployeeIdAndEmployeePw("admin", "admin")
-            //         .orElse(null);
-            // session.setAttribute("employee", employeeTmp);
-            // return ResponseEntity.ok(employeeTmp);
+//             Temporary code for development (default admin login)
+             Employee employeeTmp = employeeRepository
+                     .findByEmployeeIdAndEmployeePw(adminId, adminPassword)
+                     .orElse(null);
+             session.setAttribute("employee", employeeTmp);
+             return ResponseEntity.ok(employeeTmp);
 
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 
@@ -121,8 +130,7 @@ public class EmployeeController {
         return ResponseEntity.ok(employeePage);
     }
 
-    // Register a new employee from modal
-    @PostMapping("/registerEmployee")
+    @PostMapping(value = "/registerEmployee")
     public ResponseEntity<String> registerEmployee(@RequestBody EmployeeDTO employeeDTO) {
         if (employeeService.existsByEmployeeId(employeeDTO.getEmployeeId())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)

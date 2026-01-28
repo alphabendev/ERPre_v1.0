@@ -1,10 +1,11 @@
-
 package com.project.erpre.init;
 
 import com.project.erpre.model.Employee;
 import com.project.erpre.repository.EmployeeRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,26 +13,36 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 @Configuration
+@ConfigurationProperties(prefix = "admin")
+@Slf4j
+@Data
 public class DataInitializer {
 
+    private String id;
+    private String password;
+    private String email;
+    private String name;
+    private String tel;
+
     @Bean
-    CommandLineRunner initDatabase(@Autowired EmployeeRepository employeeRepository) {
+    CommandLineRunner initDatabase(EmployeeRepository employeeRepository) {
         return args -> {
-            // Check if default admin exists
-            if (!employeeRepository.existsById("admin")) {
+
+            if (!employeeRepository.existsById(id)) {
+
                 Employee defaultAdmin = Employee.builder()
-                        .employeeId("admin")
-                        .employeePw("admin123")  // In production, use proper password hashing
-                        .employeeName("System Administrator")
-                        .employeeEmail("admin@example.com")
-                        .employeeTel("000-0000-0000")
+                        .employeeId(id)
+                        .employeePw(password)   // hash later
+                        .employeeName(name)
+                        .employeeEmail(email)
+                        .employeeTel(tel)
                         .employeeRole("ADMIN")
                         .employeeInsertDate(Timestamp.valueOf(LocalDateTime.now()))
                         .employeeDeleteYn("N")
                         .build();
 
                 employeeRepository.save(defaultAdmin);
-                System.out.println("Default admin user has been initialized");
+                log.info("Default admin user initialized: {}", id);
             }
         };
     }

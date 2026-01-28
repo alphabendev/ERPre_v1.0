@@ -191,20 +191,20 @@ export const useHooksList = () => {
         employee,
 
         // Handlers
-        handleProductChange,
-        handleProductEdit,
-        addProductRow,
-        removeProductRow,
-        removeProducteditRow,
-
-        handleSubmit,
-        handleEdit,
-        handleResubmit,
+        // handleProductChange,
+        // handleProductEdit,
+        // addProductRow,
+        // removeProductRow,
+        // removeProducteditRow,
+        //
+        // handleSubmit,
+        // handleEdit,
+        // handleResubmit,
 
         formatDateForInput,
-        displayItems,
-        editProductRow,
-        displayItemEdit,
+        // displayItems,
+        // editProductRow,
+        // displayItemEdit,
         setCustomerData,
         selectedProductIndex,
         setProducts,
