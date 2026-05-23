@@ -7,6 +7,7 @@ import ProductSearchModal from '../common/ProductSearchModal'; // Import product
 import { useHooksList } from './OrderHooks'; // Hook for handling states and logic
 import '../../../resources/static/css/sales/Order.css';
 import { color } from 'chart.js/helpers';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 
 
@@ -82,45 +83,16 @@ function Order() {
         setProductModalOpen(true);
     };
 
-    const [role, setRole] = useState('');
-    const [loading, setLoading] = useState(true);
-
-
-    const fetchEmployee = async () => {
-        try {
-            const response = await fetch('/api/employee', {
-                credentials: "include", // Include session
-            });
-            if (response.ok) {
-                const data = await response.json();
-                return data;
-            } else {
-                console.error('Failed to fetch user information.');
-                return null;
-            }
-        } catch (error) {
-            console.error('Error occurred while fetching user information:', error);
-            return null;
-        }
-    };
+    const { role, loading } = useCurrentUser();
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const empData = await fetchEmployee();
-                if (empData) {
-                    setRole(empData.employeeRole);
-                }
-            } catch (err) {
-                window.showToast('No access permission for this page.', 'error');
-                setTimeout(() => {
-                    window.location.href = '/main';
-                }, 1000); // 1000 milliseconds
-            } finally {
-            }
-        };
-        fetchData();
-    }, []);
+        if (!loading && !role) {
+            window.showToast('No access permission for this page.', 'error');
+            setTimeout(() => {
+                window.location.href = '/main';
+            }, 1000);
+        }
+    }, [role, loading]);
 
 
     const updateOrderStatus = async (orderNo, status, message) => {
@@ -524,7 +496,7 @@ function Order() {
                                 ))
                             ) : (
                                 <tr className="tr_empty">
-                                    <td colSpan="10">
+                                    <td colSpan={10}>
                                         <div className="no_data">
                                             <i className="bi bi-exclamation-triangle"></i> Please select a customer first.
                                         </div>
@@ -537,7 +509,7 @@ function Order() {
                     {customerData.customerName && (
                         <div className="table_footer_wrapper">
                             <tr>
-                                <td colSpan="5" style={{ textAlign: 'right', fontWeight: 'bold', padding: '12px 8px' }}>Total Amount :
+                                <td colSpan={5} style={{ textAlign: 'right', fontWeight: 'bold', padding: '12px 8px' }}>Total Amount :
                                     <span style={{ marginLeft: "5px" }}>{(
                                         (isCreateMode ? products : isEditMode || isResubmitMode ? displayItemEdit : displayItems || [])
                                             .reduce((sum, item) => sum + (isCreateMode ? item?.price || 0 : item?.orderDPrice || 0) * (isCreateMode ? item?.quantity || 0 : item?.orderDQty || 0), 0)

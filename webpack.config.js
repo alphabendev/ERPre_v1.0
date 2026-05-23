@@ -11,21 +11,21 @@ const hrPath = './components/hr/';
 module.exports = {
     context: path.resolve(__dirname, 'src/main/react'),
     entry: {
-        login: './components/auth/Login.js',
-        main: './components/main/Main.js',
+        login: './components/auth/Login.tsx',
+        main: './components/main/Main.tsx',
 
-        order: `${salesPath}Order.js`,
-        orderList: `${salesPath}OrderList.js`,
-        orderReport: `${salesPath}OrderReport.js`,
+        order: `${salesPath}Order.tsx`,
+        orderList: `${salesPath}OrderList.tsx`,
+        orderReport: `${salesPath}OrderReport.tsx`,
 
-        productList: `${productPath}ProductList.js`,
-        productPrice: `${pricePath}Price.js`,
-        productCategory: `${productPath}ProductCategory.js`,
+        productList: `${productPath}ProductList.tsx`,
+        productPrice: `${pricePath}Price.tsx`,
+        productCategory: `${productPath}ProductCategory.tsx`,
 
-        customerList: `${customerPath}CustomerList.js`,
+        customerList: `${customerPath}CustomerList.tsx`,
 
-        employeeList: `${hrPath}EmployeeList.js`,
-        employeeRegister: `${hrPath}EmployeeRegister.js`,
+        employeeList: `${hrPath}EmployeeList.tsx`,
+        employeeRegister: `${hrPath}EmployeeRegister.tsx`,
     },
 
     devtool: "eval-cheap-module-source-map", // ✔ FIXED (comma, not semicolon)
@@ -45,12 +45,12 @@ module.exports = {
                 resolve: { fullySpecified: false }
             },
             {
-                test: /\.js?$/,
+                test: /\.(js|jsx|ts|tsx)$/,
                 exclude: /(node_modules)/,
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env', '@babel/preset-react']
+                        presets: ['@babel/preset-env', '@babel/preset-react', '@babel/preset-typescript']
                     }
                 }
             },
@@ -89,6 +89,7 @@ module.exports = {
     ],
 
     resolve: {
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
         fallback: {
             process: require.resolve('process/browser'),
             url: require.resolve('url/')

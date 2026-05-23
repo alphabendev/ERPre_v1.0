@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, useSearchParams } from "react-router-dom";
 import Layout from "../../layout/Layout";
 import '../../../resources/static/css/sales/OrderList.css';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 const fetchOrders = async () => {
     try {
@@ -17,23 +18,7 @@ const fetchOrders = async () => {
     }
 };
 
-const fetchEmployee = async () => {
-    try {
-        const response = await fetch('/api/employee', {
-            credentials: "include", // Include session
-        });
-        if (response.ok) {
-            const data = await response.json();
-            return data;
-        } else {
-            console.error('Failed to fetch user information.');
-            return null;
-        }
-    } catch (error) {
-        console.error('Error occurred while fetching user information:', error);
-        return null;
-    }
-};
+
 
 const updateOrderStatus = async (orderNo) => {
     try {
@@ -87,8 +72,9 @@ function OrderList() {
     const [searchTerm, setSearchTerm] = useState('');
     const [itemsPerPage, setItemsPerPage] = useState(20);
     const [currentPage, setCurrentPage] = useState(1);
-    const [role, setRole] = useState('');
-    const [employeeId, setEmployeeId] = useState('');
+    const { employee, loading: userLoading } = useCurrentUser();
+    const role = employee?.employeeRole || '';
+    const employeeId = employee?.employeeId || '';
     const [orders, setOrders] = useState([]);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
@@ -148,41 +134,43 @@ function OrderList() {
     };
 
     useEffect(() => {
+        if (userLoading) return;
+        if (!employee) {
+            window.showToast('No access permission for this page.', 'error');
+            setTimeout(() => {
+                window.location.href = '/main';
+            }, 1000);
+            return;
+        }
+
         const fetchData = async () => {
             try {
-                // Get employee information
-                const empData = await fetchEmployee();
-                if (empData) {
-                    setRole(empData.employeeRole);
-                    setEmployeeId(empData.employeeId);
+                const empRole = employee.employeeRole;
+                const empId = employee.employeeId;
 
-                    // Permission check for Assigned mode
-                    if (itsAssignedMode && empData.employeeRole !== 'admin') {
-                        window.showToast('No access permission for this page.', 'error');
-                        setTimeout(() => {
-                            window.location.href = '/main'; // Redirect unauthorized users to main page
-                        }, 1000); // 1000 milliseconds
-                        return;
-                    }
-
+                // Permission check for Assigned mode
+                if (itsAssignedMode && empRole !== 'admin') {
+                    window.showToast('No access permission for this page.', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/main'; // Redirect unauthorized users to main page
+                    }, 1000); // 1000 milliseconds
+                    return;
                 }
+
                 // Get order information
                 const orderData = await fetchOrders();
 
                 // Filter orders
-                if (empData.employeeRole === 'admin') {
+                if (empRole === 'admin') {
                     setOrders(orderData); // Show all orders for admin
                 } else {
-                    const filteredOrders = orderData.filter(order => order.employee.employeeId === empData.employeeId);
+                    const filteredOrders = orderData.filter(order => order.employee.employeeId === empId);
                     setOrders(filteredOrders);
                 }
             } catch (err) {
-                window.showToast('No access permission for this page.', 'error');
-                setTimeout(() => {
-                    window.location.href = '/main';
-                }, 1000); // 1000 milliseconds
+                window.showToast('Error loading data.', 'error');
             } finally {
-                setLoading(false); // Data loading completed
+                setLoading(false);
             }
         };
         fetchData();
@@ -194,21 +182,10 @@ function OrderList() {
     }, [itsAssignedMode]);
 
 
-    useEffect(() => {
-        if (Array.isArray(filteredOrders)) {
-            // Update select all checkbox state
-            const ingOrders = filteredOrders.filter(order => order.orderHStatus === 'ing');
-            const isAllSelected = ingOrders.length > 0 && ingOrders.every(order => selectedOrders.has(order.orderNo));
-            setAllSelected(isAllSelected);
-        } else {
-            setAllSelected(false);
-        }
-    }, [selectedOrders, filteredOrders]);
-
     // Sort filtered orders by registration date in descending order
     const sortedOrders = [...orders].sort((a, b) => {
-        const dateA = new Date(a.orderHInsertDate);
-        const dateB = new Date(b.orderHInsertDate);
+        const dateA = new Date(a.orderHInsertDate) as any;
+        const dateB = new Date(b.orderHInsertDate) as any;
         return dateB - dateA; // Descending order sort
     });
 
@@ -235,6 +212,17 @@ function OrderList() {
 
         return matchesFilter && matchesSearch && isDateInRange;
     });
+
+    useEffect(() => {
+        if (Array.isArray(filteredOrders)) {
+            // Update select all checkbox state
+            const ingOrders = filteredOrders.filter(order => order.orderHStatus === 'ing');
+            const isAllSelected = ingOrders.length > 0 && ingOrders.every(order => selectedOrders.has(order.orderNo));
+            setAllSelected(isAllSelected);
+        } else {
+            setAllSelected(false);
+        }
+    }, [selectedOrders, filteredOrders]);
 
     const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../../resources/static/css/common/Sidebar.css';
 import { useLocation } from 'react-router-dom';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
 function Sidebar({ currentMenu }) {
     const [activeSubMenu, setActiveSubMenu] = useState(() => {
@@ -8,32 +9,12 @@ function Sidebar({ currentMenu }) {
         return path.split('/').pop();
     });
     const [loginTime, setLoginTime] = useState('Time information unavailable');
-    const [employee, setEmployee] = useState(null);
-    const [role, setRole] = useState('');
+    const { employee, role } = useCurrentUser();
     const location = useLocation();
 
     useEffect(() => {
         const storedLoginTime = localStorage.getItem('loginTime');
         setLoginTime(storedLoginTime || 'Time information unavailable');
-    }, []);
-
-
-    useEffect(() => {
-        const fetchEmployee = async () => {
-            try {
-                const response = await fetch('/api/employee', { credentials: 'include' });
-                if (response.ok) {
-                    const data = await response.json();
-                    setEmployee(data);
-                    setRole(data.employeeRole);
-                } else {
-                    console.error('Failed to fetch user information.');
-                }
-            } catch (error) {
-                console.error('Error occurred while fetching user information:', error);
-            }
-        };
-        fetchEmployee();
     }, []);
 
     useEffect(() => {

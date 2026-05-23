@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15
-    container_name: erpre-postgres
+    container_name: erpre-db
     environment:
       POSTGRES_DB: erpre
       POSTGRES_USER: postgres

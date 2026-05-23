@@ -1,6 +1,7 @@
 // src/main/react/components/sales/OrderHooks.js
 import { useState, useEffect } from 'react';
 import { useSearchParams } from "react-router-dom";
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 export const useHooksList = () => {
 
@@ -50,8 +51,8 @@ export const useHooksList = () => {
     // Date
     const [todayDate, setTodayDate] = useState('');
 
-    // Employee
-    const [employee, setEmployee] = useState(null); // Logged-in user info
+    // Employee from shared custom hook
+    const { employee } = useCurrentUser();
 
     // Selected product index
     const [selectedProductIndex, setSelectedProductIndex] = useState(null);
@@ -91,7 +92,7 @@ export const useHooksList = () => {
 
     // 🟡 useEffect: Sync customer data
     useEffect(() => {
-        setCustomerData(customer || {});
+        setCustomerData((customer as any) || {});
     }, [customer]);
 
     // 🟡 useEffect: Fetch categories based on selection
@@ -122,25 +123,7 @@ export const useHooksList = () => {
         fetchCategories();
     }, [selectedCategory.top, selectedCategory.middle]);
 
-    // 🟡 useEffect: Fetch employee info
-    useEffect(() => {
-        const fetchEmployee = async () => {
-            try {
-                const response = await fetch('/api/employee', {
-                    credentials: "include", // Include session
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setEmployee(data);
-                } else {
-                    console.error('Failed to fetch employee info.');
-                }
-            } catch (error) {
-                console.error('Error fetching employee info:', error);
-            }
-        };
-        fetchEmployee();
-    }, []);
+
 
     // 🟡 useEffect: Fetch order details (for view/edit)
     useEffect(() => {
